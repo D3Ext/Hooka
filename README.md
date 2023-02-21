@@ -1,4 +1,5 @@
 <p align="center">
+  <img src="assets/gopher.png" width="130" heigth="60" alt="Gopher"/>
   <h1 align="center">Hooka</h1>
   <p align="center">~ Shellcode injector, hooks detector and more written in Golang ~</p>
 </p>
@@ -16,14 +17,14 @@
 
 I started this project to create a powerful shellcode injector with a lot of malleable capabilities via CLI flags like detecting hooked functions, using Hells Gate technique and more. Why in Golang? Because it's a great language to develop malware and this project can help with it by providing an stable API with some functions which can be really useful.
 
-There isn't too much info about detecting Windows hooks in ***Golang*** so I decided to try by my own. However I've also taken some code from [BananaPhone](https://github.com/C-Sto/BananaPhone) and [Doge-Gabh](https://github.com/timwhitez/Doge-Gabh) projects (thanks a lot to ***C-Sto*** and ***timwhitez***)
+However I've also taken some code from [BananaPhone](https://github.com/C-Sto/BananaPhone) and [Doge-Gabh](https://github.com/timwhitez/Doge-Gabh) projects (thanks a lot to ***C-Sto*** and ***timwhitez***)
 
 # Features
 
 - Inject shellcode from remote URL or local file
 - Shellcode reflective DLL injection (***sRDI***)
 - ***AMSI*** and ***ETW*** patch
-- Detects hooked functions (i.e. CreateRemoteThread)
+- Detects hooked functions (i.e. NtCreateThread)
 - Compatible with base64 and hex encoded shellcode
 - Hell's Gate technique
 - Capable of unhooking functions via multiple techniques:
@@ -61,7 +62,7 @@ ZwQuerySystemTime
 git clone https://github.com/D3Ext/Hooka
 ```
 
-> This is the help panel
+> Help panel
 ```
   _   _                   _              _
  | | | |   ___     ___   | | __   __ _  | |
@@ -143,7 +144,7 @@ As you can see Hooka provides a lot of CLI flags to help you in all kind of situ
 > Detecting hooks
 <img src="assets/hooks.png">
 
-> Injecting shellcode via CreateRemoteThread
+> Injecting shellcode via NtCreateThread
 <img src="assets/crt.png">
 
 > Test function
@@ -191,7 +192,7 @@ func main(){
   fmt.Println(hooks)
 
   // Check if an especific function is hooked
-  check, err := hooka.IsHooked("CreateRemoteThread") // func IsHooked(funcname string) (bool, error) {}
+  check, err := hooka.IsHooked("NtCreateThread") // func IsHooked(funcname string) (bool, error) {}
   if err != nil {
     log.Fatal(err)
   }
@@ -212,7 +213,8 @@ import (
 
 func main(){
 
-  // 8c2beefa1c516d318252c9b1b45253e0549bb1c4 = CreateRemoteThread
+  // 8c2beefa1c516d318252c9b1b45253e0549bb1c4 = NtCreateThread
+  // it comes from: hooka.HashFromFunc("NtCreateThread")
 
   // Returns a pointer to function like NewProc()
   proc, err := hooka.FuncFromHash("8c2beefa1c516d318252c9b1b45253e0549bb1c4")
@@ -272,7 +274,17 @@ func main(){
     log.Fatal(err)
   }
 
-  fmt.Println("[+] Function should have been unhooked!")
+  err = hooka.FullUnhook()
+  if err != nil {
+    log.Fatal(err)
+  }
+
+  err = hooka.PerunsUnhook()
+  if err != nil {
+    log.Fatal(err)
+  }
+
+  fmt.Println("[+] Functions should have been unhooked!")
 }
 ```
 
@@ -289,10 +301,14 @@ https://github.com/C-Sto/BananaPhone
 https://github.com/timwhitez/Doge-Gabh
 https://github.com/Ne0nd0g/go-shellcode
 https://www.ired.team/offensive-security/defense-evasion/detecting-hooked-syscall-functions#checking-for-hooks
+https://www.ired.team/offensive-security/defense-evasion/how-to-unhook-a-dll-using-c++
 https://github.com/Kara-4search/HookDetection_CSharp
+https://github.com/RedLectroid/APIunhooker
 https://github.com/plackyhacker/Peruns-Fart
 https://blog.sektor7.net/#!res/2021/perunsfart.md
 https://teamhydra.blog/2020/09/18/implementing-direct-syscalls-using-hells-gate/
+https://www.ired.team/offensive-security/defense-evasion/retrieving-ntdll-syscall-stubs-at-run-time
+https://www.ired.team/offensive-security/defense-evasion/windows-api-hashing-in-malware
 ```
 
 # Disclaimer
