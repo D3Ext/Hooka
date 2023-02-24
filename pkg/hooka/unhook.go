@@ -6,8 +6,8 @@ func ClassicUnhook(funcname string, dllpath string) (error) {
   return core.Unhook(funcname, dllpath)
 }
 
-func FullUnhook(funcname string) (error) {
-  return core.FullUnhook(funcname)
+func FullUnhook(dllpath string) (error) {
+  return core.FullUnhook(dllpath)
 }
 
 func PerunsUnhook() (error) {

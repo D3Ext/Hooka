@@ -15,6 +15,7 @@ import (
   "errors"
   "unsafe"
   "syscall"
+  "io/ioutil"
 
   "golang.org/x/sys/windows"
 
@@ -62,7 +63,65 @@ func ClassicUnhook(funcname string, dllpath string) (error) {
 }
 
 func FullUnhook(dllpath string) (error) {
-  return nil 
+
+  ntdll := syscall.NewLazyDLL("ntdll.dll")
+  protectVirtualMemory := ntdll.NewProc("NtProtectVirtualMemory")
+
+  dll_f, err := ioutil.ReadFile(dllpath)
+  if err != nil {
+    return err
+  }
+
+  pe_f, err := pe.Open(dllpath)
+  if err != nil {
+    return err
+  }
+  defer pe_f.Close()
+  
+  text_section := pe_f.Section(string([]byte{'.', 't', 'e', 'x', 't'}))
+  dllBytes := dll_f[text_section.Offset:text_section.Size]
+
+  dll_load, err := windows.LoadDLL(dllpath)
+  if err != nil {
+    return err
+  }
+  
+  handle := dll_load.Handle
+  dllBase := uintptr(handle)
+  dllOffset := uint(dllBase) + uint(text_section.VirtualAddress)
+  
+  var oldfartcodeperms uintptr
+  
+  regionsize := uintptr(len(dllBytes))
+  handlez := uintptr(0xffffffffffffffff)
+
+  runfunc, _, _ := protectVirtualMemory.Call(
+    handlez,
+    uintptr(unsafe.Pointer(&dllOffset)),
+    uintptr(unsafe.Pointer(&regionsize)),
+    syscall.PAGE_EXECUTE_READWRITE,
+    uintptr(unsafe.Pointer(&oldfartcodeperms)),
+  )
+
+  for i := 0; i < len(dllBytes); i++ {
+    loc := uintptr(dllOffset + uint(i))
+    mem := (*[1]byte)(unsafe.Pointer(loc))
+    (*mem)[0] = dllBytes[i]
+  }
+
+  runfunc, _, _ = protectVirtualMemory.Call(
+    handlez,
+    uintptr(unsafe.Pointer(&dllOffset)),
+    uintptr(unsafe.Pointer(&regionsize)),
+    oldfartcodeperms,
+    uintptr(unsafe.Pointer(&oldfartcodeperms)),
+  )
+
+  if runfunc != 0 {
+    return errors.New("an error has ocurred")
+  }
+
+  return nil
 }
 
 func PerunsUnhook() (error) {
