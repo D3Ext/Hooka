@@ -1,12 +1,8 @@
 package hooka
 
-import (
-  "golang.org/x/sys/windows"
+import "github.com/D3Ext/Hooka/core"
 
-  "github.com/D3Ext/Hooka/core"
-)
-
-func FuncFromHash(hash string, dll string) (*windows.LazyProc, string, error) {
+func FuncFromHash(hash string, dll string) (uint16, string, error) {
   return core.FuncFromHash(hash, dll)
 }
 

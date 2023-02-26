@@ -6,6 +6,7 @@ import (
   "fmt"
   "time"
   "bytes"
+  "unsafe"
   "strings"
   "net/http"
   "math/rand"
@@ -19,8 +20,21 @@ import (
   "github.com/Binject/debug/pe"
 )
 
-const ntdllpath = "C:\\Windows\\System32\\ntdll.dll"
-const kernel32path = "C:\\Windows\\System32\\kernel32.dll"
+/*
+
+This code has been taken and modified from BananaPhone project
+
+*/
+
+const (
+  ntdllpath       = "C:\\Windows\\System32\\ntdll.dll"
+  kernel32path    = "C:\\Windows\\System32\\kernel32.dll"
+)
+
+const (
+  IDX = 32
+)
+
 var HookCheck = []byte{0x4c, 0x8b, 0xd1, 0xb8} // Define hooked bytes to look for
 
 type MayBeHookedError struct { // Define custom error for hooked functions
@@ -31,7 +45,7 @@ func (e MayBeHookedError) Error() string {
   return fmt.Sprintf("may be hooked: wanted %x got %x", HookCheck, e.Foundbytes)
 }
 
-func RvaToOffset(pefile *pe.File, rva uint32) (uint32) {
+func rvaToOffset(pefile *pe.File, rva uint32) (uint32) {
   for _, hdr := range pefile.Sections {
     baseoffset := uint64(rva)
     if baseoffset > uint64(hdr.VirtualAddress) &&
@@ -51,7 +65,6 @@ func CheckBytes(b []byte) (uint16, error) {
 }
 
 // Generate a random integer between range
-
 func RandomInt(max int, min int) (int) { // Return a random number between max and min
   rand.Seed(time.Now().UnixNano())
   rand_int := rand.Intn(max - min + 1) + min
@@ -107,9 +120,14 @@ func StrToSha1(str string) (string) {
 
 /*
 
-This code has been taken from BananaPhone and Doge-Gabh project
+This code has been taken and modified from Doge-Gabh project
 
 */
+
+type Export struct {
+  Name           string
+  VirtualAddress uintptr
+}
 
 type sstring struct {
   Length    uint16
@@ -147,6 +165,40 @@ func inMemLoads(modulename string) (uintptr, uintptr) {
   }
   
   return 0, 0
+}
+
+func getExport(pModuleBase uintptr) []Export {
+  var exports []Export
+  var pImageNtHeaders = (*IMAGE_NT_HEADER)(unsafe.Pointer(pModuleBase + uintptr((*IMAGE_DOS_HEADER)(unsafe.Pointer(pModuleBase)).E_lfanew))) // ntH(pModuleBase)
+  //IMAGE_NT_SIGNATURE
+  if pImageNtHeaders.Signature != 0x00004550 {
+    return nil
+  }
+  var pImageExportDirectory *imageExportDir
+
+  pImageExportDirectory = ((*imageExportDir)(unsafe.Pointer(uintptr(pModuleBase + uintptr(pImageNtHeaders.OptionalHeader.DataDirectory[0].VirtualAddress)))))
+
+  pdwAddressOfFunctions := pModuleBase + uintptr(pImageExportDirectory.AddressOfFunctions)
+  pdwAddressOfNames := pModuleBase + uintptr(pImageExportDirectory.AddressOfNames)
+
+  pwAddressOfNameOrdinales := pModuleBase + uintptr(pImageExportDirectory.AddressOfNameOrdinals)
+
+  for cx := uintptr(0); cx < uintptr((pImageExportDirectory).NumberOfNames); cx++ {
+    var export Export
+    pczFunctionName := pModuleBase + uintptr(*(*uint32)(unsafe.Pointer(pdwAddressOfNames + cx*4)))
+    pFunctionAddress := pModuleBase + uintptr(*(*uint32)(unsafe.Pointer(pdwAddressOfFunctions + uintptr(*(*uint16)(unsafe.Pointer(pwAddressOfNameOrdinales + cx*2)))*4)))
+    export.Name = windows.BytePtrToString((*byte)(unsafe.Pointer(pczFunctionName)))
+    export.VirtualAddress = uintptr(pFunctionAddress)
+    exports = append(exports, export)
+  }
+
+  return exports
+}
+
+func memcpy(dst, src, size uintptr) {
+  for i := uintptr(0); i < size; i++ {
+    *(*uint8)(unsafe.Pointer(dst + i)) = *(*uint8)(unsafe.Pointer(src + i))
+  }
 }
 
 func findFirstSyscallOffset(pMem []byte, size int, moduleAddress uintptr) int {
@@ -202,8 +254,26 @@ func gMLO(i int) (start uintptr, size uintptr, modulepath string) {
 }
 
 //getModuleLoadedOrder returns the start address of module located at i in the load order. This might be useful if there is a function you need that isn't in ntdll, or if some rude individual has loaded themselves before ntdll.
-func getMLO(i int) (start uintptr, size uintptr, modulepath *sstring) {
-  return
+func getMLO(i int) (start uintptr, size uintptr, modulepath *sstring)
+
+func uint16Down(b []byte, idx uint16) uint16 {
+  _ = b[1] // bounds check hint to compiler; see golang.org/issue/14808
+  return uint16(b[0]) - idx | uint16(b[1])<<8
+}
+
+func uint16Up(b []byte, idx uint16) uint16 {
+  _ = b[1] // bounds check hint to compiler; see golang.org/issue/14808
+  return uint16(b[0]) + idx | uint16(b[1])<<8
+}
+
+func contains(slice []string, item string) bool {
+  set := make(map[string]struct{}, len(slice))
+  for _, s := range slice {
+    set[s] = struct{}{}
+  }
+
+  _, ok := set[item]
+  return ok
 }
 
 

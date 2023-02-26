@@ -9,33 +9,48 @@ https://www.ired.team/offensive-security/defense-evasion/windows-api-hashing-in-
 
 import (
   "errors"
+  "bytes"
+  "encoding/binary"
 
-  "golang.org/x/sys/windows"
+  //"golang.org/x/sys/windows"
 
   // Third-party
   "github.com/Binject/debug/pe"
 )
 
 // Check if hash is a valid function and return its proc
-func FuncFromHash(hash string, dll string) (*windows.LazyProc, string, error) {
+func FuncFromHash(hash string, dll string) (uint16, string, error) {
   dll_pe, err := pe.Open(dll) // Open and parse dll as a PE
   if err != nil {
-    return new(windows.LazyProc), "", err
+    return 0, "", err
   }
   defer dll_pe.Close()
 
   exports, err := dll_pe.Exports() // Get exported functions
   if err != nil {
-    return new(windows.LazyProc), "", err
+    return 0, "", err
   }
 
   for _, ex := range exports {
     if (StrToSha1(ex.Name) == hash) {
-      return windows.NewLazyDLL(dll).NewProc(ex.Name), ex.Name, nil
+
+      offset := rvaToOffset(dll_pe, ex.VirtualAddress)
+      bBytes, err := dll_pe.Bytes()
+      if err != nil {
+        return 0, "", err
+      }
+
+      buff := bBytes[offset : offset+10]
+      if !bytes.HasPrefix(buff, HookCheck) {
+        return 0, "", MayBeHookedError{Foundbytes: buff}
+      }
+      
+      sysId := binary.LittleEndian.Uint16(buff[4:8])
+      return sysId, ex.Name, nil
     }
   }
 
-  return new(windows.LazyProc), "", errors.New("function not found!")
+  return 0, "", errors.New("function not found!")
 }
 
 // Convert string to sha1

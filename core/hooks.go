@@ -34,7 +34,8 @@ func DetectHooks() ([]string, error) {
   }
 
   for _, exp := range exports { // Iterate over them
-    offset := RvaToOffset(ntdll_pe, exp.VirtualAddress) // Get RVA offset
+
+    offset := rvaToOffset(ntdll_pe, exp.VirtualAddress) // Get RVA offset
     bBytes, err := ntdll_pe.Bytes() // Get bytes from ntdll.dll
     if err != nil {
       return hooked_functions, err

