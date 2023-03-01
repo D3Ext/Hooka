@@ -19,6 +19,8 @@ I started this project to create a powerful shellcode loader with a lot of malle
 
 However I've also taken some code from [BananaPhone](https://github.com/C-Sto/BananaPhone) and [Doge-Gabh](https://github.com/timwhitez/Doge-Gabh) projects (thanks a lot to ***C-Sto*** and ***timwhitez***)
 
+***Tested on x64, Windows 10***
+
 # Features
 
 - Get shellcode from remote URL or local file
@@ -38,7 +40,6 @@ However I've also taken some code from [BananaPhone](https://github.com/C-Sto/Ba
   - CreateProcess
   - EarlyBirdAPC
   - UuidFromString
-  - QueueApcThread
 
 - Dump lsass.exe process to a file
 - Windows API hashing (see [here](https://www.ired.team/offensive-security/defense-evasion/windows-api-hashing-in-malware))
