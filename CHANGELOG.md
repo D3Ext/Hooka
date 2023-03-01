@@ -1,3 +1,9 @@
+- halo's gate, uuidfromstring injection, more CLI flags and more
+- stable amsi patch, more functions and other improvements
+- new example images added
+- updated README.md
+- issue templates added
+- more functions and implementations
 - initial commit
 - Create FUNDING.yml
 - Update README.md

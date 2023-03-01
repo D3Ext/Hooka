@@ -8,61 +8,113 @@ References:
 */
 
 import (
+  "fmt"
   "errors"
-  "unsafe"
+  //"unsafe"
   "strings"
-  "encoding/binary"
+  //"encoding/binary"
   
+  "github.com/awgh/rawreader"
   "github.com/Binject/debug/pe"
 )
 
+// Return syscall from memory, if it fails it tries to get syscall from disk
 func GetSysId(funcname string) (uint16, error) {
 
-  ntdll_handle, _ := inMemLoads(string([]byte{'n', 't', 'd', 'l', 'l'}))
+  var ntdll_pe *pe.File
+  var err error
 
-  if (ntdll_handle == 0) {
-    return 0, errors.New("an error has ocurred while getting ntdll.dll handle!")
+  s, si := inMemLoads(string([]byte{'n', 't', 'd', 'l', 'l'})) // Load ntdll in memory
+
+  rr := rawreader.New(uintptr(s), int(si))
+  ntdll_pe, err = pe.NewFileFromMemory(rr) // Parse PE file
+  if err != nil {
+    return 0, err
   }
 
-  exports := getExport(ntdll_handle)
+  //exports := getExport(s)
+  exports, err := ntdll_pe.Exports()
+  if err != nil {
+    return 0, err
+  }
 
   for _, exp := range exports {
     if (strings.ToLower(funcname) == strings.ToLower(exp.Name)) {
-
-      buff := make([]byte, 10)
-
-      if exp.VirtualAddress <= ntdll_handle {
-        return 0, errors.New("an error has ocurred getting syscall id")
+      
+      offset := rvaToOffset(ntdll_pe, exp.VirtualAddress)
+      bBytes, err := ntdll_pe.Bytes()
+      if err != nil {
+        return 0, err
       }
 
-      memcpy(uintptr(unsafe.Pointer(&buff[0])), uintptr(exp.VirtualAddress), 10)
+      buff := bBytes[offset : offset+10]
+      sysId, e := CheckBytes(buff)
+      var hook_err MayBeHookedError
 
-      // Check if function isn't hooked
-      if buff[0] == 0x4c && buff[1] == 0x8b && buff[2] == 0xd1 && buff[3] == 0xb8 && buff[6] == 0x00 && buff[7] == 0x00 {
-        // Return syscall id
-        return binary.LittleEndian.Uint16(buff[4:8]), nil
+      if errors.As(e, &hook_err) {
 
-      } else { // Enter here if function seems to be hooked
-        
-        for i := uintptr(1); i <= 500; i++ { // Loop 500 times to get a valid syscall
+        // Enter here if function seems to be hooked
+        start, size := GetNtdllStart()
 
-          memcpy(uintptr(unsafe.Pointer(&buff[0])), uintptr(exp.VirtualAddress + i*IDX), 10)
-          if buff[0] == 0x4c && buff[1] == 0x8b && buff[2] == 0xd1 && buff[3] == 0xb8 && buff[6] == 0x00 && buff[7] == 0x00 {
-            return uint16Down(buff[4:8], uint16(i)), nil // Return syscall
-          }
+        // Search forward
+        distanceNeighbor := 0
+        for i := uintptr(offset); i < start+size; i += 1 {
+          if bBytes[i] == byte('\x0f') && bBytes[i+1] == byte('\x05') && bBytes[i+2] == byte('\xc3') {
+            distanceNeighbor++
 
-          memcpy(uintptr(unsafe.Pointer(&buff[0])), uintptr(exp.VirtualAddress - i*IDX), 10)
-          if buff[0] == 0x4c && buff[1] == 0x8b && buff[2] == 0xd1 && buff[3] == 0xb8 && buff[6] == 0x00 && buff[7] == 0x00 {
-            return uint16Up(buff[4:8], uint16(i)), nil
+            sysId, e := CheckBytes(bBytes[i+14 : i+14+8]) // Check hook again
+            if !errors.As(e, &hook_err) { // Return syscall ID if it isn't hooked
+              return sysId - uint16(distanceNeighbor), e
+            }
           }
         }
-      }
 
-      return getDiskSysId(funcname)
+        // Search backward
+        distanceNeighbor = 1
+        for i := uintptr(offset) - 1; i > 0; i -= 1 {
+          if bBytes[i] == byte('\x0f') && bBytes[i+1] == byte('\x05') && bBytes[i+2] == byte('\xc3') {
+            distanceNeighbor++
+
+            sysId, e := CheckBytes(bBytes[i+14 : i+14+8])
+            if !errors.As(e, &hook_err) { // Return syscall ID if it isn't hooked
+              return sysId + uint16(distanceNeighbor) - 1, e
+            }
+          }
+        }
+      } else {
+        // Return syscall id as it isn't hooked
+        return sysId, nil
+      }
     }
   }
 
   return getDiskSysId(funcname)
+}
+
+func GetFuncPtr(funcname string) (uint64, error) {
+  var p *pe.File
+  var err error
+
+  s, si := inMemLoads("ntdll")
+
+  rr := rawreader.New(uintptr(s), int(si))
+  p, err = pe.NewFileFromMemory(rr)
+  if err != nil {
+    return 0, err
+  }
+
+  exports, err := p.Exports()
+  if err != nil {
+    return 0, err
+  }
+
+  for _, ex := range exports {
+    if strings.EqualFold(funcname, ex.Name) {
+      return uint64(uintptr(s)) + uint64(ex.VirtualAddress), nil
+    }
+  }
+
+  return 0, fmt.Errorf("could not find function: %s", funcname)
 }
 
 func getDiskSysId(funcname string) (uint16, error) {
@@ -87,51 +139,50 @@ func getDiskSysId(funcname string) (uint16, error) {
     if (strings.ToLower(funcname) == strings.ToLower(exp.Name)) {
 
       offset := rvaToOffset(ntdll_pe, exp.VirtualAddress)
-      b, err := ntdll_pe.Bytes()
+      bBytes, err := ntdll_pe.Bytes()
       if err != nil {
         return 0, err
       }
 
-      buff := b[offset : offset+10]
+      buff := bBytes[offset : offset+10]
+      sysId, e := CheckBytes(buff)
+      var hook_err MayBeHookedError
 
-      // Check if function isn't hooked
-      if buff[0] == 0x4c && buff[1] == 0x8b && buff[2] == 0xd1 && buff[3] == 0xb8 && buff[6] == 0x00 && buff[7] == 0x00 {
-        // Return syscall id
-        return binary.LittleEndian.Uint16(buff[4:8]), nil
+      if errors.As(e, &hook_err) {
 
-      } else { // Enter here if function seems to be hooked
-        
-        for i := uintptr(1); i <= 500; i++ { // Loop 500 times to get a valid syscall
+        // Enter here if function seems to be hooked
+        start, size := GetNtdllStart()
 
-          if *(*byte)(unsafe.Pointer(uintptr(unsafe.Pointer(&buff[0])) + i*IDX)) == 0x4c &&
-            *(*byte)(unsafe.Pointer(uintptr(unsafe.Pointer(&buff[1])) + i*IDX)) == 0x8b &&
-            *(*byte)(unsafe.Pointer(uintptr(unsafe.Pointer(&buff[2])) + i*IDX)) == 0xd1 &&
-            *(*byte)(unsafe.Pointer(uintptr(unsafe.Pointer(&buff[3])) + i*IDX)) == 0xb8 &&
-            *(*byte)(unsafe.Pointer(uintptr(unsafe.Pointer(&buff[6])) + i*IDX)) == 0x00 &&
-            *(*byte)(unsafe.Pointer(uintptr(unsafe.Pointer(&buff[7])) + i*IDX)) == 0x00 {
+        // Search forward
+        distanceNeighbor := 0
+        for i := uintptr(offset); i < start+size; i += 1 {
+          if bBytes[i] == byte('\x0f') && bBytes[i+1] == byte('\x05') && bBytes[i+2] == byte('\xc3') {
+            distanceNeighbor++
 
-            buff[4] = *(*byte)(unsafe.Pointer(uintptr(unsafe.Pointer(&buff[4])) + i*IDX))
-            buff[5] = *(*byte)(unsafe.Pointer(uintptr(unsafe.Pointer(&buff[5])) + i*IDX))
-
-            return uint16Down(buff[4:8], uint16(i)), nil // Return syscall
-          }
-
-          if *(*byte)(unsafe.Pointer(uintptr(unsafe.Pointer(&buff[0])) - i*IDX)) == 0x4c &&
-            *(*byte)(unsafe.Pointer(uintptr(unsafe.Pointer(&buff[1])) - i*IDX)) == 0x8b &&
-            *(*byte)(unsafe.Pointer(uintptr(unsafe.Pointer(&buff[2])) - i*IDX)) == 0xd1 &&
-            *(*byte)(unsafe.Pointer(uintptr(unsafe.Pointer(&buff[3])) - i*IDX)) == 0xb8 &&
-            *(*byte)(unsafe.Pointer(uintptr(unsafe.Pointer(&buff[6])) - i*IDX)) == 0x00 &&
-            *(*byte)(unsafe.Pointer(uintptr(unsafe.Pointer(&buff[7])) - i*IDX)) == 0x00 {
-
-            buff[4] = *(*byte)(unsafe.Pointer(uintptr(unsafe.Pointer(&buff[4])) - i*IDX))
-            buff[5] = *(*byte)(unsafe.Pointer(uintptr(unsafe.Pointer(&buff[5])) - i*IDX))
-
-            return uint16Up(buff[4:8], uint16(i)), nil
+            sysId, e := CheckBytes(bBytes[i+14 : i+14+8]) // Check hook again
+            if !errors.As(e, &hook_err) { // Return syscall ID if it isn't hooked
+              return sysId - uint16(distanceNeighbor), e
+            }
           }
         }
-      }
 
-      return 0, errors.New("syscall ID not found")
+        // Search backward
+        distanceNeighbor = 1
+        for i := uintptr(offset) - 1; i > 0; i -= 1 {
+          if bBytes[i] == byte('\x0f') && bBytes[i+1] == byte('\x05') && bBytes[i+2] == byte('\xc3') {
+            distanceNeighbor++
+
+            sysId, e := CheckBytes(bBytes[i+14 : i+14+8])
+            if !errors.As(e, &hook_err) { // Return syscall ID if it isn't hooked
+              return sysId + uint16(distanceNeighbor) - 1, e
+            }
+          }
+        }
+
+      } else {
+        // Return syscall id as it isn't hooked
+        return sysId, nil
+      }
     }
   }
 

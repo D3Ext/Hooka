@@ -321,7 +321,7 @@ func CreateProcessHalos(shellcode []byte) (error) {
   WriteProcessMemory.Call(
     uintptr(procInfo.Process),
     addr,
-    (uintptr)(unsafe.Pointer(&shellcode[0])),
+    uintptr(unsafe.Pointer(&shellcode[0])),
     uintptr(len(shellcode)),
   )
 
