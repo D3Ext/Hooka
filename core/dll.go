@@ -38,6 +38,20 @@ func ConvertDllToShellcode(dll_file string, func_name string, data string) ([]by
   return sc, nil
 }
 
+func ConvertDllBytesToShellcode(dll_bytes []byte, func_name string, data string) ([]byte, error) {
+  var hashFunction []byte
+  if func_name != "" { // Check if dll function name is default or not
+    hashFunctionUint32 := hashFunctionName(func_name)
+    hashFunction = pack(hashFunctionUint32)
+  } else {
+    hashFunction = pack(uint32(0x10))
+  }
+
+  sc := ConvertBytes(dll_bytes, hashFunction, []byte(data))
+  return sc, nil
+}
+
+
 //
 //
 // Auxiliary functions down here

