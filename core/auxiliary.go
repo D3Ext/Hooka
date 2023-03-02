@@ -20,12 +20,6 @@ import (
   "github.com/Binject/debug/pe"
 )
 
-/*
-
-This code has been taken and modified from BananaPhone project
-
-*/
-
 const (
   ntdllpath       = "C:\\Windows\\System32\\ntdll.dll"
   kernel32path    = "C:\\Windows\\System32\\kernel32.dll"

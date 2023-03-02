@@ -72,9 +72,6 @@ func DumpLsass(output string) (error) {
 
 func elevateProcessToken() (error) {
 
-  //token elevation process sourced from
-  //https://stackoverflow.com/questions/39595252/shutting-down-windows-using-golang-code
-
   type Luid struct {
     lowPart  uint32 // DWORD
     highPart int32  // long

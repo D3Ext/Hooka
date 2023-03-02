@@ -22,7 +22,6 @@ func PatchEtw() (error) {
     procEtwEventWriteFull.Addr(), 
     procEtwEventWrite.Addr(),
     procEtwEventWriteEx.Addr(),
-    //procEtwEventWriteNoRegistration.Addr(),
     procEtwEventWriteString.Addr(),
     procEtwEventWriteTransfer.Addr(),
   }
@@ -39,7 +38,6 @@ func PatchEtw() (error) {
       uintptr(len(data)),
       uintptr(unsafe.Pointer(&nLength)),
     )
-
   }
 
   return nil

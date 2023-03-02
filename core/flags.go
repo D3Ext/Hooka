@@ -24,6 +24,7 @@ func ParseFlags() (string, string, string, string, bool, bool, int, bool, bool, 
   var amsi bool
   var etw bool
   var lsass_flag string
+  //var pid int
 
   flag.StringVar(&sc_url, "url", "", "remote shellcode url (e.g. http://192.168.1.37/shellcode.bin)")
   flag.StringVar(&sc_file, "file", "", "path to file where shellcode is stored")
@@ -38,6 +39,7 @@ func ParseFlags() (string, string, string, string, bool, bool, int, bool, bool, 
   flag.BoolVar(&hex_flag, "hex", false, "decode hex encoded shellcode")
   flag.BoolVar(&test_flag, "test", false, "test shellcode injection capabilities by spawning a calc.exe")
   flag.StringVar(&lsass_flag, "lsass", "", "dump lsass.exe process memory into a file to extract credentials (run as admin)")
+  //flag.IntVar(&pid, "pid", 0, "PID to inject shellcode")
   flag.Parse()
 
   return sc_url, sc_file, dll_file, technique, hook_detect, halos, unhook, base64_flag, hex_flag, test_flag, amsi, etw, lsass_flag // Return all param values

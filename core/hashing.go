@@ -12,8 +12,6 @@ import (
   "bytes"
   "encoding/binary"
 
-  //"golang.org/x/sys/windows"
-
   // Third-party
   "github.com/Binject/debug/pe"
 )

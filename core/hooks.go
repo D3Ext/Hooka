@@ -2,16 +2,12 @@ package core
 
 /*
 
-This package provides a function to detect Windows API hooked functions (e.g. CreateRemoteThread)
-
 References:
 https://www.ired.team/offensive-security/defense-evasion/detecting-hooked-syscall-functions
-https://github.com/C-Sto/BananaPhone
 
 */
 
 import (
-  //"fmt"
   "errors"
   "strings"
 
@@ -48,9 +44,6 @@ func DetectHooks() ([]string, error) {
     if (len(exp.Name) > 3) { // Avoid errors by checking function name length
       if exp.Name[0:2] == "Nt" || exp.Name[0:2] == "Zw" { // Just use functions which start by "Nt" or "Zw"
         if errors.As(err, &hook_err) == true { // Check error
-          /*if bytes.HasPrefix(buff, []byte{0xE9}) == false {
-            fmt.Println(exp.Name)
-          }*/
           hooked_functions = append(hooked_functions, exp.Name)
         }
       }
