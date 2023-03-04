@@ -179,6 +179,10 @@ As you can see Hooka provides a lot of CLI flags to help you in all kind of situ
 
 :black_square_button: `--pid` flag to handle process injection
 
+:black_square_button: Sandboxing functions
+
+:black_square_button: Native golang [Phant0m](https://github.com/hlldz/Phant0m) to suspend EventLog threads
+
 :black_square_button: Integrated Seatbelt.exe using CLR
 
 :black_square_button: Test unhooking functions against EDRs

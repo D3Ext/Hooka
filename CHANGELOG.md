@@ -1,3 +1,7 @@
+- remote dll support
+- remove unnecessary lines - little changes
+- little changes
+- v0.1 - major changes, firex, code improvement and more
 - halo's gate, uuidfromstring injection, more CLI flags and more
 - stable amsi patch, more functions and other improvements
 - new example images added
