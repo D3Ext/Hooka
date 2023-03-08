@@ -30,7 +30,7 @@ const (
   PAGE_READWRITE = 0x04
 )
 
-func Fibers(shellcode []byte) (error) {
+func Fibers(shellcode []byte, pid int) (error) {
 
   kernel32 := windows.NewLazySystemDLL("kernel32.dll")
   ntdll := windows.NewLazySystemDLL("ntdll.dll")

@@ -16,8 +16,6 @@ func PatchEtw() (error) {
   procEtwEventWriteString   := ntdll.NewProc("EtwEventWriteString")
   procEtwEventWriteTransfer := ntdll.NewProc("EtwEventWriteTransfer")
 
-  handle := uintptr(0xffffffffffffffff)
-
   dataAddr := []uintptr{ 
     procEtwEventWriteFull.Addr(), 
     procEtwEventWrite.Addr(),
@@ -29,14 +27,13 @@ func PatchEtw() (error) {
   for i, _ := range dataAddr {
 
     data, _ := hex.DecodeString("4833C0C3")
-    var nLength uintptr
 
     procWriteProcessMemory.Call(
-      uintptr(handle),
+      uintptr(0xffffffffffffffff),
       uintptr(dataAddr[i]),
       uintptr(unsafe.Pointer(&data[0])),
       uintptr(len(data)),
-      uintptr(unsafe.Pointer(&nLength)),
+      0,
     )
   }
 

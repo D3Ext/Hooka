@@ -6,11 +6,9 @@ This package returns CLI flags with customizble options
 
 */
 
-import (
-  "flag"
-)
+import "flag"
 
-func ParseFlags() (string, string, string, string, string, bool, bool, int, bool, bool, bool, bool, bool, string) {
+func ParseFlags() (string, string, string, string, string, bool, bool, int, bool, bool, bool, bool, bool, string, int) {
   var sc_url string
   var sc_file string
   var dll_file string
@@ -25,7 +23,8 @@ func ParseFlags() (string, string, string, string, string, bool, bool, int, bool
   var amsi bool
   var etw bool
   var lsass_flag string
-  //var pid int
+  var pid int
+  //var elevate bool
 
   flag.StringVar(&sc_url, "url", "", "remote url where shellcode is stored (e.g. http://192.168.1.37/shellcode.bin)")
   flag.StringVar(&dll_url, "remote-dll", "", "remote url where DLL is stored, especify function separated by comma (i.e. http://192.168.1.37/evil.dll,xyz)")
@@ -41,10 +40,12 @@ func ParseFlags() (string, string, string, string, string, bool, bool, int, bool
   flag.BoolVar(&hex_flag, "hex", false, "decode hex encoded shellcode")
   flag.BoolVar(&test_flag, "test", false, "test shellcode injection capabilities by spawning a calc.exe")
   flag.StringVar(&lsass_flag, "lsass", "", "dump lsass.exe process memory into a file to extract credentials (run as admin)")
-  //flag.IntVar(&pid, "pid", 0, "PID to inject shellcode")
+  flag.IntVar(&pid, "pid", 0, "PID to inject shellcode into (default: self)")
+  //flag.BoolVar(&elevate, "e", false, "enable SeDebugPrivilege to be able to interact with system processes")
   flag.Parse()
 
-  return sc_url, sc_file, dll_file, dll_url, technique, hook_detect, halos, unhook, base64_flag, hex_flag, test_flag, amsi, etw, lsass_flag // Return all param values
+  // Return all param values
+  return sc_url, sc_file, dll_file, dll_url, technique, hook_detect, halos, unhook, base64_flag, hex_flag, test_flag, amsi, etw, lsass_flag, pid //elevate
 }
 
 

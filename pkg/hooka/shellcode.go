@@ -8,28 +8,24 @@ Functions which inject shellcode without Hell's Gate + Halo's Gate
 
 */
 
-func CreateRemoteThread(shellcode []byte) (error) {
-  return core.CreateRemoteThread(shellcode)
+func CreateRemoteThread(shellcode []byte, pid int) (error) {
+  return core.CreateRemoteThread(shellcode, pid)
 }
 
-func CreateProcess(shellcode []byte) (error) {
-  return core.CreateProcess(shellcode)
+func CreateProcess(shellcode []byte, pid int) (error) {
+  return core.CreateProcess(shellcode, pid)
 }
 
-func Fibers(shellcode []byte) (error) {
-  return core.Fibers(shellcode)
+func Fibers(shellcode []byte, pid int) (error) {
+  return core.Fibers(shellcode, pid)
 }
 
-func EarlyBirdApc(shellcode []byte) (error) {
-  return core.EarlyBirdApc(shellcode)
+func EarlyBirdApc(shellcode []byte, pid int) (error) {
+  return core.EarlyBirdApc(shellcode, pid)
 }
 
-/*func QueueApcThread(shellcode []byte) (error) {
-  return core.QueueApcThread(shellcode)
-}*/
-
-func UuidFromString(shellcode []byte) (error) {
-  return core.UuidFromString(shellcode)
+func UuidFromString(shellcode []byte, pid int) (error) {
+  return core.UuidFromString(shellcode, pid)
 }
 
 /*
@@ -38,11 +34,11 @@ Hell's Gate + Halo's Gate functions (WIP)
 
 */
 
-func CreateProcessHalos(shellcode []byte) (error) {
-  return core.CreateProcessHalos(shellcode)
+func CreateProcessHalos(shellcode []byte, pid int) (error) {
+  return core.CreateProcessHalos(shellcode, pid)
 }
 
-func CreateRemoteThreadHalos(shellcode []byte) (error) {
-  return core.CreateRemoteThreadHalos(shellcode)
+func CreateRemoteThreadHalos(shellcode []byte, pid int) (error) {
+  return core.CreateRemoteThreadHalos(shellcode, pid)
 }
 
