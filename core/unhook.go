@@ -24,7 +24,6 @@ import (
 
 // This function unhooks given function of especified dll (NtCreateThread and C:\\Windows\\System32\\ntdll.dll)
 func ClassicUnhook(funcname string, dllpath string) (error) {
-
   // Load DLL APIs
   k32 := syscall.NewLazyDLL("kernel32.dll")
   getCurrentProcess := k32.NewProc("GetCurrentProcess")

