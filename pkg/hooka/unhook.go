@@ -2,8 +2,8 @@ package hooka
 
 import "github.com/D3Ext/Hooka/core"
 
-func ClassicUnhook(funcname string, dllpath string) (error) {
-  return core.ClassicUnhook(funcname, dllpath)
+func ClassicUnhook(funcnames []string, dllpath string) (error) {
+  return core.ClassicUnhook(funcnames, dllpath)
 }
 
 func FullUnhook(dllpath string) (error) {

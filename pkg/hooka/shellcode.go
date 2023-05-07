@@ -16,16 +16,24 @@ func CreateProcess(shellcode []byte, pid int) (error) {
   return core.CreateProcess(shellcode, pid)
 }
 
-func Fibers(shellcode []byte, pid int) (error) {
-  return core.Fibers(shellcode, pid)
+func EnumSystemLocales(shellcode []byte) (error) {
+  return core.EnumSystemLocales(shellcode)
 }
 
-func EarlyBirdApc(shellcode []byte, pid int) (error) {
-  return core.EarlyBirdApc(shellcode, pid)
+func Fibers(shellcode []byte) (error) {
+  return core.Fibers(shellcode)
 }
 
-func UuidFromString(shellcode []byte, pid int) (error) {
-  return core.UuidFromString(shellcode, pid)
+func QueueUserApc(shellcode []byte) (error) {
+  return core.QueueUserApc(shellcode)
+}
+
+func UuidFromString(shellcode []byte) (error) {
+  return core.UuidFromString(shellcode)
+}
+
+func EtwpCreateEtwThread(shellcode []byte) (error) {
+  return core.EtwpCreateEtwThread(shellcode)
 }
 
 /*
@@ -34,11 +42,11 @@ Hell's Gate + Halo's Gate functions (WIP)
 
 */
 
-func CreateProcessHalos(shellcode []byte, pid int) (error) {
-  return core.CreateProcessHalos(shellcode, pid)
+func CreateRemoteThreadHalos(shellcode []byte) (error) {
+  return core.CreateRemoteThreadHalos(shellcode)
 }
 
-func CreateRemoteThreadHalos(shellcode []byte, pid int) (error) {
-  return core.CreateRemoteThreadHalos(shellcode, pid)
+func EnumSystemLocalesHalos(shellcode []byte) (error) {
+  return core.EnumSystemLocalesHalos(shellcode)
 }
 

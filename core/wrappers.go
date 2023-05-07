@@ -1,5 +1,14 @@
 package core
 
+/*
+
+This file contains some useful functions which
+act as a wrapper for native function so you can use them
+like kernel32.dll original functions but using native ones
+under the hood with Halo's Gate technique
+
+*/
+
 import (
   "errors"
   "unsafe"
@@ -43,11 +52,11 @@ func VirtualProtect(pHandle uintptr, addr uintptr, regionsize uintptr, newProtec
 
   r, _ := Syscall(
     sysId,
-    pHandle,
-    uintptr(unsafe.Pointer(&addr)),
+    uintptr(pHandle),
+    uintptr(addr),
     uintptr(unsafe.Pointer(&regionsize)),
-    newProtect,
-    oldProtect,
+    uintptr(newProtect),
+    uintptr(oldProtect),
   )
 
   if (r != 0) {
@@ -58,7 +67,7 @@ func VirtualProtect(pHandle uintptr, addr uintptr, regionsize uintptr, newProtec
 }
 
 // err := WriteProcessMemory(pHandle, addr, uintptr(unsafe.Pointer(&shellcode[0])), uintptr(len(shellcode)))
-func WriteProcessMemory(pHandle uintptr, addr uintptr, buffer uintptr, buffer_len uintptr, num_bytes uintptr) (error) {
+func WriteProcessMemory(pHandle uintptr, addr uintptr, buffer uintptr, buffer_len uintptr) (error) {
 
   // Get syscall
   sysId, err := GetSysId("NtWriteVirtualMemory")
@@ -66,13 +75,15 @@ func WriteProcessMemory(pHandle uintptr, addr uintptr, buffer uintptr, buffer_le
     return err
   }
 
+  var num_bytes uint32
+
   r, err := Syscall(
     sysId,
     uintptr(pHandle),
     uintptr(addr),
     uintptr(buffer),
     uintptr(buffer_len),
-    uintptr(num_bytes),
+    uintptr(unsafe.Pointer(&num_bytes)),
   )
 
   if (r != 0) || (err != nil) {

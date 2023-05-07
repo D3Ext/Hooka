@@ -22,41 +22,51 @@ import (
   "github.com/Binject/debug/pe"
 )
 
-// This function unhooks given function of especified dll (NtCreateThread and C:\\Windows\\System32\\ntdll.dll)
-func ClassicUnhook(funcname string, dllpath string) (error) {
-  // Load DLL APIs
-  k32 := syscall.NewLazyDLL("kernel32.dll")
-  getCurrentProcess := k32.NewProc("GetCurrentProcess")
-  getModuleHandle := k32.NewProc("GetModuleHandleW")
-  getProcAddress := k32.NewProc("GetProcAddress")
-  writeProcessMemory := k32.NewProc("WriteProcessMemory")
-
-  var assembly_bytes []byte
+// This function unhooks given functions of especified dll
+func ClassicUnhook(funcnames []string, dllpath string) (error) {
+  kernel32 := syscall.NewLazyDLL("kernel32.dll")
+  GetCurrentProcess := kernel32.NewProc("GetCurrentProcess")
+  GetModuleHandle := kernel32.NewProc("GetModuleHandleW")
+  GetProcAddress := kernel32.NewProc("GetProcAddress")
+  WriteProcessMemory := kernel32.NewProc("WriteProcessMemory")
 
   // should be full path: C:\\Windows\\System32\\ntdll.dll
-  ntdll_lib, _ := syscall.LoadLibrary(dllpath)
-  defer syscall.FreeLibrary(ntdll_lib)
+  lib, _ := syscall.LoadLibrary(dllpath)
+  defer syscall.FreeLibrary(lib)
 
-  procAddr, _ := syscall.GetProcAddress(ntdll_lib, funcname)
+  for _, f := range funcnames {
+    var assembly_bytes []byte
 
-  ptr_bytes := (*[1 << 30]byte)(unsafe.Pointer(procAddr))
-  funcBytes := ptr_bytes[:5:5]
+    procAddr, _ := syscall.GetProcAddress(lib, f)
 
-  for i := 0; i < 5; i++ {
-    assembly_bytes = append(assembly_bytes, funcBytes[i])
+    ptr_bytes := (*[1 << 30]byte)(unsafe.Pointer(procAddr))
+    funcBytes := ptr_bytes[:5:5]
+
+    for i := 0; i < 5; i++ {
+      assembly_bytes = append(assembly_bytes, funcBytes[i])
+    }
+
+    pHandle, _, _ := GetCurrentProcess.Call()
+
+    // Convert dll name to pointer
+    lib_ptr, _ := windows.UTF16PtrFromString(strings.Split(dllpath, "\\")[3])
+    moduleHandle, _, _ := GetModuleHandle.Call(uintptr(unsafe.Pointer(lib_ptr)))
+
+    func_ptr, _ := windows.UTF16PtrFromString(f)
+    addr, _, _ := GetProcAddress.Call(
+      moduleHandle,
+      uintptr(unsafe.Pointer(func_ptr)),
+    )
+
+    // Overwrite address with original function bytes
+    WriteProcessMemory.Call(
+      pHandle,
+      addr,
+      uintptr(unsafe.Pointer(&assembly_bytes[0])),
+      5,
+      uintptr(0),
+    )
   }
-
-  ownHandle, _, _ := getCurrentProcess.Call()
-
-  // Convert dll name to pointer
-  ntdll_ptr, _ := windows.UTF16PtrFromString(strings.Split(dllpath, "\\")[3])
-  moduleHandle, _, _ := getModuleHandle.Call(uintptr(unsafe.Pointer(ntdll_ptr)))
-
-  func_ptr, _ := windows.UTF16PtrFromString(funcname)
-  procAddr2, _, _ := getProcAddress.Call(moduleHandle, uintptr(unsafe.Pointer(func_ptr)))
-
-  // Overwrite address with original function bytes
-  writeProcessMemory.Call(ownHandle, procAddr2, uintptr(unsafe.Pointer(&assembly_bytes[0])), 5, uintptr(0))
 
   return nil
 }
@@ -64,7 +74,7 @@ func ClassicUnhook(funcname string, dllpath string) (error) {
 func FullUnhook(dllpath string) (error) {
 
   ntdll := syscall.NewLazyDLL("ntdll.dll")
-  protectVirtualMemory := ntdll.NewProc("NtProtectVirtualMemory")
+  ProtectVirtualMemory := ntdll.NewProc("NtProtectVirtualMemory")
 
   dll_f, err := ioutil.ReadFile(dllpath)
   if err != nil {
@@ -90,11 +100,10 @@ func FullUnhook(dllpath string) (error) {
   dllOffset := uint(dllBase) + uint(text_section.VirtualAddress)
   
   var oldfartcodeperms uintptr
-  
   regionsize := uintptr(len(dllBytes))
   handlez := uintptr(0xffffffffffffffff)
 
-  runfunc, _, _ := protectVirtualMemory.Call(
+  runfunc, _, _ := ProtectVirtualMemory.Call(
     handlez,
     uintptr(unsafe.Pointer(&dllOffset)),
     uintptr(unsafe.Pointer(&regionsize)),
@@ -108,7 +117,7 @@ func FullUnhook(dllpath string) (error) {
     (*mem)[0] = dllBytes[i]
   }
 
-  runfunc, _, _ = protectVirtualMemory.Call(
+  runfunc, _, _ = ProtectVirtualMemory.Call(
     handlez,
     uintptr(unsafe.Pointer(&dllOffset)),
     uintptr(unsafe.Pointer(&regionsize)),
@@ -124,7 +133,7 @@ func FullUnhook(dllpath string) (error) {
 }
 
 func PerunsUnhook() (error) {
-  procWriteProcessMemory := syscall.NewLazyDLL("kernel32.dll").NewProc("WriteProcessMemory")
+  WriteProcessMemory := syscall.NewLazyDLL("kernel32.dll").NewProc("WriteProcessMemory")
 
   var si syscall.StartupInfo
   var pi syscall.ProcessInformation
@@ -162,14 +171,14 @@ func PerunsUnhook() (error) {
 
   ntHeader := (*IMAGE_NT_HEADER)(unsafe.Pointer(addrMod + uintptr((*IMAGE_DOS_HEADER)(unsafe.Pointer(addrMod)).E_lfanew)))
   if (ntHeader == nil) {
-    return errors.New("an error has ocurred while getting nt header")
+    return errors.New("an error has ocurred while getting NT header")
   }
 
   time.Sleep(50 * time.Millisecond)
 
   modSize := ntHeader.OptionalHeader.SizeOfImage
   if (modSize == 0) {
-    return errors.New("an error has ocurred while getting nt header size")
+    return errors.New("an error has ocurred while getting NT header size")
   }
 
   cache := make([]byte, modSize)
@@ -205,13 +214,8 @@ func PerunsUnhook() (error) {
   endOffset := findLastSyscallOffset(cache, int(secHdr.VirtualSize), addrMod)
   cleanSyscalls := cache[startOffset:endOffset]
 
-  /*ZwWriteVirtualMemory, err := GetSysId("ZwWriteVirtualMemory")
-  if err != nil {
-    return err
-  }*/
-
   // Don't handle error as it may return false errors
-  procWriteProcessMemory.Call(
+  WriteProcessMemory.Call(
     uintptr(0xffffffffffffffff),
     uintptr(addrMod + uintptr(startOffset)),
     uintptr(unsafe.Pointer(&cleanSyscalls[0])),

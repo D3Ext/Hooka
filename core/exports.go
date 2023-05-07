@@ -6,7 +6,20 @@ This package exports all windows struct which are used
 
 */
 
-import "golang.org/x/sys/windows"
+import (
+  "unsafe"
+
+  "golang.org/x/sys/windows"
+)
+
+const (
+  ntdllpath       = "C:\\Windows\\System32\\ntdll.dll"
+  kernel32path    = "C:\\Windows\\System32\\kernel32.dll"
+)
+
+const (
+  IDX = 32
+)
 
 type IMAGE_OPTIONAL_HEADER struct {
   Magic                       uint16
@@ -41,38 +54,7 @@ type IMAGE_OPTIONAL_HEADER struct {
   DataDirectory               [16]IMAGE_DATA_DIRECTORY
 }
 
-type IMAGE_OPTIONAL_HEADER64 IMAGE_OPTIONAL_HEADER /*{
-  Magic                       uint16
-  MajorLinkerVersion          byte
-  MinorLinkerVersion          byte
-  SizeOfCode                  uint32
-  SizeOfInitializedData       uint32
-  SizeOfUninitializedData     uint32
-  AddressOfEntryPoint         uint32
-  BaseOfCode                  uint32
-  ImageBase                   uint64
-  SectionAlignment            uint32
-  FileAlignment               uint32
-  MajorOperatingSystemVersion uint16
-  MinorOperatingSystemVersion uint16
-  MajorImageVersion           uint16
-  MinorImageVersion           uint16
-  MajorSubsystemVersion       uint16
-  MinorSubsystemVersion       uint16
-  Win32VersionValue           uint32
-  SizeOfImage                 uint32
-  SizeOfHeaders               uint32
-  CheckSum                    uint32
-  Subsystem                   uint16
-  DllCharacteristics          uint16
-  SizeOfStackReserve          uint64
-  SizeOfStackCommit           uint64
-  SizeOfHeapReserve           uint64
-  SizeOfHeapCommit            uint64
-  LoaderFlags                 uint32
-  NumberOfRvaAndSizes         uint32
-  DataDirectory               uintptr
-}*/
+type IMAGE_OPTIONAL_HEADER64 IMAGE_OPTIONAL_HEADER
 
 type IMAGE_OPTIONAL_HEADER32 struct {
   Magic                       uint16
@@ -207,6 +189,28 @@ type memStatusEx struct { // Auxiliary struct to retrieve total memory
   ullTotalPhys uint64
   ullAvailPhys uint64
   unused       [5]uint64
+}
+
+type CLIENT_ID struct {
+  UniqueProcess uintptr
+  UniqueThread  uintptr
+}
+
+type PTHREAD_BASIC_INFORMATION struct {
+  exitStatus      int32
+  pTebBaseAddress uintptr
+  clientId        CLIENT_ID
+  AffinityMask    uintptr
+  Priority        int
+  BasePriority    int
+  v               int
+}
+
+type SC_SERVICE_TAG_QUERY struct {
+  processId  uint32
+  serviceTag uint32
+  reserved   uint32
+  pBuffer    unsafe.Pointer
 }
 
 

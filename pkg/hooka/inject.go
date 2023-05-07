@@ -6,10 +6,3 @@ func Inject(shellcode []byte, technique string, pid int) (error) {
   return core.Inject(shellcode, technique, pid)
 }
 
-func InjectHalos(shellcode []byte, technique string, pid int) (error) {
-  return core.InjectHalos(shellcode, technique, pid)
-}
-
-
-
-

@@ -7,6 +7,7 @@ import (
   "time"
   "bytes"
   "unsafe"
+  "syscall"
   "strings"
   "net/http"
   "math/rand"
@@ -18,15 +19,6 @@ import (
 
   // Third-party packages
   "github.com/Binject/debug/pe"
-)
-
-const (
-  ntdllpath       = "C:\\Windows\\System32\\ntdll.dll"
-  kernel32path    = "C:\\Windows\\System32\\kernel32.dll"
-)
-
-const (
-  IDX = 32
 )
 
 var HookCheck = []byte{0x4c, 0x8b, 0xd1, 0xb8} // Define hooked bytes to look for
@@ -128,6 +120,112 @@ func StrToSha1(str string) (string) {
   h.Write([]byte(str))
   bs := h.Sum(nil)
   return fmt.Sprintf("%x", bs)
+}
+
+func CheckHighPrivs() (bool, error) { // Function to check if current user has Administrator privileges
+  var sid *windows.SID
+  err := windows.AllocateAndInitializeSid(
+    &windows.SECURITY_NT_AUTHORITY,
+    2,
+    windows.SECURITY_BUILTIN_DOMAIN_RID,
+    windows.DOMAIN_ALIAS_RID_ADMINS,
+    0, 0, 0, 0, 0, 0,
+    &sid,
+  )
+  if err != nil {
+    return false, err
+  }
+
+  token := windows.Token(0)
+  member, err := token.IsMember(sid) // Check if is inside admin group
+  if err != nil {
+    return false, err
+  }
+
+  return member, nil // return true (means high privs) or false (means low privs)
+}
+
+
+// Enable SeDebugPrivilege
+func ElevateProcessToken() (error) {
+
+  type Luid struct {
+    lowPart  uint32 // DWORD
+    highPart int32  // long
+  }
+
+  type LuidAndAttributes struct {
+    luid       Luid   // LUID
+    attributes uint32 // DWORD
+  }
+
+  type TokenPrivileges struct {
+    privilegeCount uint32 // DWORD
+    privileges     [1]LuidAndAttributes
+  }
+
+  const SeDebugPrivilege = "SeDebugPrivilege"
+  const tokenAdjustPrivileges = 0x0020
+  const tokenQuery = 0x0008
+  var hToken uintptr
+
+  kernel32 := syscall.NewLazyDLL("kernel32.dll")
+  advapi32 := syscall.NewLazyDLL("advapi32.dll")
+
+  GetCurrentProcess := kernel32.NewProc("GetCurrentProcess")
+  GetLastError := kernel32.NewProc("GetLastError")
+  OpenProcessToken := advapi32.NewProc("OpenProcessToken")
+  LookupPrivilegeValue := advapi32.NewProc("LookupPrivilegeValueW")
+  AdjustTokenPrivileges := advapi32.NewProc("AdjustTokenPrivileges")
+
+  currentProcess, _, _ := GetCurrentProcess.Call()
+
+  result, _, err := OpenProcessToken.Call(
+    currentProcess,
+    tokenAdjustPrivileges|tokenQuery,
+    uintptr(unsafe.Pointer(&hToken)),
+  )
+
+  if result != 1 {
+    return err
+  }
+
+  var tkp TokenPrivileges
+
+  result, _, err = LookupPrivilegeValue.Call(
+    uintptr(0),
+    uintptr(unsafe.Pointer(syscall.StringToUTF16Ptr(SeDebugPrivilege))),
+    uintptr(unsafe.Pointer(&(tkp.privileges[0].luid))),
+  )
+
+  if result != 1 {
+    return err
+  }
+
+  const SePrivilegeEnabled uint32 = 0x00000002
+
+  tkp.privilegeCount = 1
+  tkp.privileges[0].attributes = SePrivilegeEnabled
+
+  result, _, err = AdjustTokenPrivileges.Call(
+    hToken,
+    0,
+    uintptr(unsafe.Pointer(&tkp)),
+    0,
+    uintptr(0),
+    0,
+  )
+
+  if result != 1 {
+    return err
+  }
+
+  result, _, _ = GetLastError.Call()
+  if result != 0 {
+    return err
+  }
+
+  return nil
 }
 
 /*

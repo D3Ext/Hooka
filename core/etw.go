@@ -7,13 +7,13 @@ import (
 )
 
 func PatchEtw() (error) {
-  ntdll                     := syscall.NewLazyDLL("ntdll.dll")
-  procWriteProcessMemory    := syscall.NewLazyDLL("kernel32.dll").NewProc("WriteProcessMemory")
+  ntdll := syscall.NewLazyDLL("ntdll.dll")
+  procWriteProcessMemory := syscall.NewLazyDLL("kernel32.dll").NewProc("WriteProcessMemory")
 
-  procEtwEventWrite         := ntdll.NewProc("EtwEventWrite")
-  procEtwEventWriteEx       := ntdll.NewProc("EtwEventWriteEx")
-  procEtwEventWriteFull     := ntdll.NewProc("EtwEventWriteFull")
-  procEtwEventWriteString   := ntdll.NewProc("EtwEventWriteString")
+  procEtwEventWrite := ntdll.NewProc("EtwEventWrite")
+  procEtwEventWriteEx := ntdll.NewProc("EtwEventWriteEx")
+  procEtwEventWriteFull := ntdll.NewProc("EtwEventWriteFull")
+  procEtwEventWriteString := ntdll.NewProc("EtwEventWriteString")
   procEtwEventWriteTransfer := ntdll.NewProc("EtwEventWriteTransfer")
 
   dataAddr := []uintptr{ 

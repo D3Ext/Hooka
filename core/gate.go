@@ -1,18 +1,9 @@
 package core
 
-/*
-
-References:
-
-
-*/
-
 import (
   "fmt"
   "errors"
-  //"unsafe"
   "strings"
-  //"encoding/binary"
   
   "github.com/awgh/rawreader"
   "github.com/Binject/debug/pe"
@@ -32,7 +23,6 @@ func GetSysId(funcname string) (uint16, error) {
     return 0, err
   }
 
-  //exports := getExport(s)
   exports, err := ntdll_pe.Exports()
   if err != nil {
     return 0, err
@@ -95,7 +85,7 @@ func GetFuncPtr(funcname string) (uint64, error) {
   var p *pe.File
   var err error
 
-  s, si := inMemLoads("ntdll")
+  s, si := inMemLoads(string([]byte{'n','t','d','l','l'}))
 
   rr := rawreader.New(uintptr(s), int(si))
   p, err = pe.NewFileFromMemory(rr)

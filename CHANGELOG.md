@@ -1,3 +1,6 @@
+- little change
+- UAC bypass, anti-sandbox functions, general improvements and more
+- new TODOs
 - remote dll support
 - remove unnecessary lines - little changes
 - little changes

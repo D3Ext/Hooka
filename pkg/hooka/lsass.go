@@ -6,7 +6,4 @@ func DumpLsass(output string) (error) {
   return core.DumpLsass(output)
 }
 
-func EnableSeDebug() (error) {
-  return core.ElevateProcessToken()
-}
 

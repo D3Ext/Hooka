@@ -14,5 +14,13 @@ func CalcShellcode() ([]byte) {
   return core.CalcShellcode()
 }
 
+func ElevateProcessToken() (error) {
+  return core.ElevateProcessToken()
+}
+
+func CheckHighPrivs() (bool, error) {
+  return core.CheckHighPrivs()
+}
+
 
 

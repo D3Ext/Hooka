@@ -254,20 +254,5 @@ func readFile(path string) ([]byte, error) {
   return fileBytes, nil
 }
 
-/*func WriteFile(filename string, contents []byte) error {
-  f, err := os.Create(filename)
-  if err != nil {
-    return err
-  }
-  defer f.Close()
-
-  _, err = f.Write(contents)
-  if err != nil {
-    return err
-  }
-
-  return nil
-}*/
-
 
 
