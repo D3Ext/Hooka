@@ -36,6 +36,10 @@ func EtwpCreateEtwThread(shellcode []byte) (error) {
   return core.EtwpCreateEtwThread(shellcode)
 }
 
+func RtlCreateUserThread(shellcode []byte, pid int) (error) {
+  return core.RtlCreateUserThread(shellcode, pid)
+}
+
 /*
 
 Hell's Gate + Halo's Gate functions (WIP)
