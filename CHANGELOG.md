@@ -1,3 +1,15 @@
+- Merge pull request #3 from D3Ext/dependabot/go_modules/golang.org/x/sys-0.12.0
+- Bump golang.org/x/sys from 0.8.0 to 0.12.0
+- Merge pull request #4 from D3Ext/dependabot/go_modules/github.com/google/uuid-1.3.1
+- Bump github.com/google/uuid from 1.3.0 to 1.3.1
+- Merge pull request #2 from D3Ext/dependabot/go_modules/github.com/D3Ext/maldev-0.1.4
+- Merge branch 'main' of https://github.com/D3Ext/Hooka
+- ACG supported, examples added, Makefile, README update and typos fixed
+- Bump github.com/D3Ext/maldev from 0.1.3 to 0.1.4
+- Create dependabot.yml
+- weird package error, undefines RtlCreateUserThread
+- little fix
+- new features, shellcode injection techniques, fixes and much more
 - little change
 - UAC bypass, anti-sandbox functions, general improvements and more
 - new TODOs
