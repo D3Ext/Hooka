@@ -6,6 +6,6 @@ func FuncFromHash(hash string, dll string, hashing_func func(string) string) (ui
 	return core.FuncFromHash(hash, dll, hashing_func)
 }
 
-func GetSysIdHashing(hash string, hashing_func func(str string) string) (uint16, string, error) {
+func HalosFuncFromHash(hash string, hashing_func func(str string) string) (uint16, string, error) {
 	return core.GetSysIdHashing(hash, hashing_func)
 }

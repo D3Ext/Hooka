@@ -52,7 +52,7 @@ func FuncFromHash(hash string, dll string, hashing_func func(str string) string)
 	return 0, "", errors.New("function not found!")
 }
 
-func GetSysIdHashing(hash string, hashing_func func(str string) string) (uint16, string, error) {
+func HalosFuncFromHash(hash string, hashing_func func(str string) string) (uint16, string, error) {
 	var ntdll_pe *pe.File
 	var err error
 

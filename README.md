@@ -245,5 +245,8 @@ This project is under [MIT](https://github.com/D3Ext/Hooka/blob/main/LICENSE) li
 
 Copyright © 2023, *D3Ext*
 
+# Support
+
+<a href="https://www.buymeacoffee.com/D3Ext" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-blue.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
 
 
