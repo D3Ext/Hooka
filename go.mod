@@ -6,7 +6,7 @@ require (
 	github.com/Binject/debug v0.0.0-20230508195519-26db73212a7a
 	github.com/D3Ext/maldev v0.1.4
 	github.com/awgh/rawreader v0.0.0-20200626064944-56820a9c6da4
-	github.com/google/uuid v1.3.1
+	github.com/google/uuid v1.4.0
 	golang.org/x/sys v0.12.0
 )
 
