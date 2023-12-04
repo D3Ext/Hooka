@@ -7,7 +7,7 @@ require (
 	github.com/D3Ext/maldev v0.1.4
 	github.com/awgh/rawreader v0.0.0-20200626064944-56820a9c6da4
 	github.com/google/uuid v1.3.1
-	golang.org/x/sys v0.12.0
+	golang.org/x/sys v0.15.0
 )
 
 require (
