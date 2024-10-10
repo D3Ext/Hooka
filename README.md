@@ -78,9 +78,9 @@ This tool is able to generate loaders with this features:
 Just clone the repository like this:
 
 ```sh
-$ git clone https://github.com/D3Ext/Hooka
-$ cd Hooka
-$ make
+git clone https://github.com/D3Ext/Hooka
+cd Hooka
+make
 ```
 
 After that you will find the binary under the `build/` folder
@@ -88,7 +88,7 @@ After that you will find the binary under the `build/` folder
 # Usage
 
 > Help panel
-```sh
+```
   _   _                   _              _
  | | | |   ___     ___   | | __   __ _  | |
  | |_| |  / _ \   / _ \  | |/ /  / _` | | |
