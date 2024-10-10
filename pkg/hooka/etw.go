@@ -1,7 +1,11 @@
 package hooka
 
-import "github.com/D3Ext/Hooka/core"
+import "github.com/D3Ext/Hooka/evasion"
 
 func PatchEtw() error {
-	return core.PatchEtw()
+	return evasion.PatchEtw()
+}
+
+func PatchEtw2() error {
+	return evasion.PatchEtw2()
 }

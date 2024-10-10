@@ -1,9 +1,9 @@
 package hooka
 
 import (
-	"github.com/D3Ext/Hooka/core"
+	"github.com/D3Ext/Hooka/evasion"
 )
 
 func EnableACG() error {
-	return core.EnableACG()
+	return evasion.EnableACG()
 }

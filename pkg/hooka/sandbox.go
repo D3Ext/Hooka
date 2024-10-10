@@ -1,39 +1,39 @@
 package hooka
 
-import "github.com/D3Ext/Hooka/core"
+import "github.com/D3Ext/Hooka/evasion"
 
-func AutoCheck() error {
-	return core.AutoCheck()
+func AutoCheck() (bool, error) {
+	return evasion.AutoCheck()
 }
 
 func CheckMemory() (bool, error) {
-	return core.CheckMemory()
+	return evasion.CheckMemory()
 }
 
 func CheckDisk() (bool, error) {
-	return core.CheckDisk()
+	return evasion.CheckDisk()
 }
 
 func CheckInternet() bool {
-	return core.CheckInternet()
+	return evasion.CheckInternet()
 }
 
 func CheckHostname() (bool, error) {
-	return core.CheckHostname()
+	return evasion.CheckHostname()
 }
 
 func CheckUsername() (bool, error) {
-	return core.CheckUsername()
+	return evasion.CheckUsername()
 }
 
 func CheckCpu() bool {
-	return core.CheckCpu()
+	return evasion.CheckCpu()
 }
 
 func CheckDrivers() bool {
-	return core.CheckDrivers()
+	return evasion.CheckDrivers()
 }
 
 func CheckProcess() (bool, error) {
-	return core.CheckProcess()
+	return evasion.CheckProcess()
 }

@@ -7,8 +7,8 @@ import (
 	"log"
 )
 
-// Convert string to Sha1 (used for hashing)
-func StrToSha1(str string) string {
+// Convert string to SHA1 (used for hashing)
+func Sha1(str string) string {
 	h := sha1.New()
 	h.Write([]byte(str))
 	bs := h.Sum(nil)
@@ -17,12 +17,13 @@ func StrToSha1(str string) string {
 }
 
 func main() {
-	hash := "6caed95840c323932b680d07df0a1bce28a89d1c" // StrToSha1("NtWriteVirtualMemory")
+	hash := "b4de6817d3b22d785568d6480b613c4b2520729a" // Sha1("GetCurrentProcess")
 
-	sysid, str, err := hooka.FuncFromHash(hash, "C:\\Windows\\System32\\ntdll.dll", StrToSha1)
+	GetCurrentProcess, _, err := hooka.GetFuncPtr(hash, "C:\\Windows\\System32\\kernel32.dll", Sha1)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("%s - %x\n", str, sysid)
+  pHandle, _, _ := GetCurrentProcess.Call()
+  fmt.Println("[+] Current process:", pHandle)
 }

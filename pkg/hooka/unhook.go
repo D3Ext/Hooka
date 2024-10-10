@@ -1,15 +1,17 @@
 package hooka
 
-import "github.com/D3Ext/Hooka/core"
+import "github.com/D3Ext/Hooka/evasion"
 
 func ClassicUnhook(funcnames []string, dllpath string) error {
-	return core.ClassicUnhook(funcnames, dllpath)
+	return evasion.ClassicUnhook(funcnames, dllpath)
 }
 
-func FullUnhook(dllpath string) error {
-	return core.FullUnhook(dllpath)
+// unhook especified DLLs (provide full paths)
+func FullUnhook(dlls_to_unhook []string) error {
+	return evasion.FullUnhook(dlls_to_unhook)
 }
 
+// unhook ntdll.dll
 func PerunsUnhook() error {
-	return core.PerunsUnhook()
+	return evasion.PerunsUnhook()
 }

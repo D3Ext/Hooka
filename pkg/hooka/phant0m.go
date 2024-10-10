@@ -1,15 +1,12 @@
 package hooka
 
-import "github.com/D3Ext/Hooka/core"
+import "github.com/D3Ext/Hooka/evasion"
 
-func GetEventLogPid() (uint32, error) {
-	return core.GetEventLogPid()
+func GetEventLogPid() (int, error) {
+	return evasion.GetEventLogPid()
 }
 
-func Phant0m(pid uint32) error {
-	return core.Phant0m(pid)
+func Phant0m(eventlog_pid int) error {
+	return evasion.Phant0m(eventlog_pid)
 }
 
-func Phant0mWithOutput(pid uint32) error {
-	return core.Phant0mWithOutput(pid)
-}

@@ -15,4 +15,6 @@ func main() {
 
 	fmt.Println("ACG Guard enabled!")
 	time.Sleep(1000 * time.Second)
+
+  // Do some other stuff
 }

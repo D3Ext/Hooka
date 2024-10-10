@@ -1,13 +1,13 @@
 package hooka
 
 import (
-	"github.com/D3Ext/Hooka/core"
+	"github.com/D3Ext/Hooka/evasion"
 )
 
 func DetectHooks() ([]string, error) {
-	return core.DetectHooks()
+	return evasion.DetectHooks()
 }
 
 func IsHooked(func_name string) (bool, error) {
-	return core.IsHooked(func_name)
+	return evasion.IsHooked(func_name)
 }

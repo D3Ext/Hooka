@@ -1,7 +1,11 @@
 package hooka
 
-import "github.com/D3Ext/Hooka/core"
+import "github.com/D3Ext/Hooka/evasion"
 
 func PatchAmsi() error {
-	return core.PatchAmsi()
+	return evasion.PatchAmsi()
+}
+
+func PatchAmsi2() error {
+	return evasion.PatchAmsi2()
 }

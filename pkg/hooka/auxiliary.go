@@ -1,23 +1,21 @@
 package hooka
 
-import "github.com/D3Ext/Hooka/core"
+import "github.com/D3Ext/Hooka/utils"
 
 func GetShellcodeFromUrl(url string) ([]byte, error) {
-	return core.GetShellcodeFromUrl(url)
+	return utils.GetShellcodeFromUrl(url)
 }
 
 func GetShellcodeFromFile(file string) ([]byte, error) {
-	return core.GetShellcodeFromFile(file)
+	return utils.GetShellcodeFromFile(file)
 }
 
 func CalcShellcode() []byte {
-	return core.CalcShellcode()
-}
-
-func ElevateProcessToken() error {
-	return core.ElevateProcessToken()
+	return utils.CalcShellcode()
 }
 
 func CheckHighPrivs() (bool, error) {
-	return core.CheckHighPrivs()
+  return utils.CheckHighPrivs()
 }
+
+
