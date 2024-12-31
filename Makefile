@@ -16,13 +16,13 @@ linux: $(LINUX) ## Build for Linux
 darwin: $(DARWIN) ## Build for Darwin (macOS)
 
 $(WINDOWS):
-	GOOS=windows GOARCH=amd64 go build -o build/$(WINDOWS) -ldflags="-s -w -X main.version=$(VERSION)" ./cmd/main.go
+	GOOS=windows GOARCH=amd64 go build -o build/$(WINDOWS) -ldflags="-s -w" ./cmd/main.go
 
 $(LINUX):
-	GOOS=linux GOARCH=amd64 go build -o build/$(LINUX) -ldflags="-s -w -X main.version=$(VERSION)" ./cmd/main.go
+	GOOS=linux GOARCH=amd64 go build -o build/$(LINUX) -ldflags="-s -w" ./cmd/main.go
 
 $(DARWIN):
-	GOOS=darwin GOARCH=amd64 go build -o build/$(DARWIN) -ldflags="-s -w -X main.version=$(VERSION)" ./cmd/main.go
+	GOOS=darwin GOARCH=amd64 go build -o build/$(DARWIN) -ldflags="-s -w" ./cmd/main.go
 
 clean: ## Remove previous build
 	rm -f build/$(WINDOWS) build/$(LINUX) build/$(DARWIN)

